@@ -169,17 +169,43 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
       <div><div class="un" id="sNm">Admin VIN</div><div class="ur" id="sRl">Administrador</div></div>
     </div>
     <nav class="sb-nav">
+      <!-- Selector de máquina -->
+      <div id="maqSelectorWrap" style="padding:0 .5rem .5rem;display:none">
+        <label style="font-size:10px;color:var(--gt);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Máquina activa</label>
+        <select id="sidebarMaqSelect" onchange="cambiarMaquina(this.value)"
+          style="width:100%;background:var(--g2);border:1px solid var(--gb);border-radius:7px;padding:6px 9px;color:var(--bla);font-size:12px;outline:none">
+        </select>
+        <button class="btn bp bsm" style="width:100%;margin-top:5px;font-size:11px" onclick="go('nuevaMaquina')" id="btnNuevaMaq">
+          + Nueva máquina
+        </button>
+      </div>
+      <div id="maqSelectorWrap" style="padding:0 .5rem .75rem;display:none">
+        <label style="font-size:10px;color:var(--gt);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Máquina activa</label>
+        <select id="sidebarMaqSelect" onchange="cambiarMaquina(this.value)" style="width:100%;background:var(--g2);border:1px solid var(--gb);border-radius:7px;padding:6px 9px;color:var(--bla);font-size:12px;outline:none"></select>
+        <button class="btn bp bsm admin-only" style="width:100%;margin-top:5px;font-size:11px" onclick="go('nuevaMaquina')">+ Nueva máquina</button>
+      </div>
       <div class="nsec">Principal</div>
       <div class="ni on" onclick="go('carga')"><span class="nic">📤</span><span>Cargar reporte</span></div>
       <div class="ni" onclick="go('resultado')"><span class="nic">📊</span><span>Resultado del mes</span></div>
       <div class="ni" onclick="go('stock')"><span class="nic">📦</span><span>Stock</span></div>
       <div class="ni" onclick="go('maquina')"><span class="nic">🏭</span><span>Mi máquina</span></div>
       <div class="ni" onclick="go('historial')"><span class="nic">🕐</span><span>Historial</span></div>
+      <div class="ni" onclick="go('market')"><span class="nic">🛒</span><span>VIN Market</span></div>
+      <div class="ni" onclick="go('alertas')"><span class="nic" id="alertaIcon">🔔</span><span>Alertas</span></div>
+      <div class="ni" onclick="go('market')"><span class="nic">🛒</span><span>VIN Market</span></div>
+      <div class="ni" onclick="go('alertas')"><span class="nic" id="alertaIcon">🔔</span><span>Alertas</span></div>
       <div class="nsec admin-only">Admin VIN</div>
       <div class="ni admin-only" onclick="go('config')"><span class="nic">⚙️</span><span>Configuración</span></div>
       <div class="ni admin-only" onclick="go('global')"><span class="nic">🌐</span><span>Resumen global</span></div>
     </nav>
-    <div class="sb-foot"><button class="boutl" onclick="logout()">↩ Cerrar sesión</button></div>
+    <div class="sb-foot">
+      <div style="padding:12px 10px 8px;border-top:1px solid var(--gb)">
+        <img src="data:image/jpeg;base64,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"
+          alt="VIN Grab & N'Joy"
+          style="width:100%;border-radius:10px;display:block;object-fit:cover;max-height:120px">
+      </div>
+      <button class="boutl" onclick="logout()">↩ Cerrar sesión</button>
+    </div>
   </div>
 
   <div class="main">
@@ -387,6 +413,64 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
         <div class="card"><div class="ct">Historial de meses guardados</div><div id="histCnt"></div></div>
       </div>
 
+      <!-- ══ VIN MARKET ══ -->
+      <div id="pg-market" class="view">
+        <div style="margin-bottom:1rem">
+          <div style="font-size:18px;font-weight:700">🛒 VIN Market</div>
+          <div style="font-size:13px;color:var(--gt);margin-top:2px">Pedido de reposición fuera del cierre mensual. El stock se actualiza al confirmar.</div>
+        </div>
+        <div class="g2">
+          <div class="card">
+            <div class="ct">Armar pedido</div>
+            <div style="font-size:12px;color:var(--gt);margin-bottom:12px">Precio según tu perfil. Descuento extra por caja completa (verde).</div>
+            <div id="marketItems"></div>
+            <div style="height:1px;background:var(--gb);margin:12px 0"></div>
+            <div style="padding:10px;background:var(--g2);border-radius:9px;margin-bottom:12px">
+              <div class="fr"><span class="fl b">Total pedido c/IVA</span><span id="marketTotal" style="color:var(--ora);font-weight:700">$0</span></div>
+              <div class="fr"><span class="fl">IVA crédito fiscal</span><span id="marketIva" style="color:var(--ver)">$0</span></div>
+              <div class="fr"><span class="fl">Neto s/IVA</span><span id="marketNeto" style="color:var(--gt)">$0</span></div>
+            </div>
+            <button class="btn bp" style="width:100%" onclick="generarPedido()">📋 Generar resumen del pedido</button>
+          </div>
+          <div class="card" id="marketResumenCard" style="display:none">
+            <div class="ct">📋 Resumen del pedido</div>
+            <div id="marketResumen"></div>
+            <div style="height:1px;background:var(--gb);margin:12px 0"></div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              <button class="btn bp" onclick="confirmarPedidoMarket()">✓ Confirmar — sumar al stock</button>
+              <button class="btn bs" onclick="copiarPedido()">📋 Copiar texto</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ALERTAS ══ -->
+      <div id="pg-alertas" class="view">
+        <div style="margin-bottom:1rem">
+          <div style="font-size:18px;font-weight:700">🔔 Alertas de stock</div>
+          <div style="font-size:13px;color:var(--gt);margin-top:2px">Productos bajo el nivel mínimo. Se actualiza al guardar reportes y confirmar compras.</div>
+        </div>
+        <div id="alertasCnt"><div style="text-align:center;padding:3rem;color:var(--gt)">Cargá un reporte para ver las alertas.</div></div>
+      </div>
+
+      <!-- ══ NUEVA MÁQUINA ══ -->
+      <div id="pg-nuevaMaquina" class="view admin-only">
+        <div style="margin-bottom:1rem">
+          <div style="font-size:18px;font-weight:700">+ Nueva máquina</div>
+          <div style="font-size:13px;color:var(--gt);margin-top:2px">Registrá una máquina y asignala a un usuario.</div>
+        </div>
+        <div class="card" style="max-width:480px">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div><label>Código</label><input type="text" id="nmCodigo" placeholder="E00226"></div>
+            <div><label>Nombre</label><input type="text" id="nmNombre" placeholder="SC-Palermo"></div>
+            <div><label>Tipo</label><select id="nmTipo"><option value="VIN">VIN (propia)</option><option value="Franquiciado">Franquiciado</option></select></div>
+            <div><label>Usuario asignado</label><select id="nmUsuario"><option value="">— seleccioná —</option></select></div>
+            <button class="btn bp" onclick="crearMaquina()">✓ Crear máquina</button>
+            <div id="nmMsg" style="font-size:12px;display:none"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ══ CONFIG ══ -->
       <div id="pg-config" class="view admin-only">
         <div class="card">
@@ -440,6 +524,78 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
       <!-- ══ GLOBAL ══ -->
       <div id="pg-global" class="view admin-only">
         <div class="card"><div class="ct">Resumen global — todas las máquinas</div><div id="globalCnt"></div></div>
+      </div>
+
+      <!-- ══ VIN MARKET ══ -->
+      <div id="pg-market" class="view">
+        <div style="margin-bottom:1rem">
+          <div style="font-size:18px;font-weight:700">🛒 VIN Market</div>
+          <div style="font-size:13px;color:var(--gt);margin-top:2px">Hacé tu pedido de reposición. Los precios son los tuyos según tu perfil.</div>
+        </div>
+        <div class="g2">
+          <div class="card">
+            <div class="ct">Armar pedido</div>
+            <div style="font-size:12px;color:var(--gt);margin-bottom:12px">
+              Ingresá la cantidad de potes que necesitás. El descuento de caja completa se aplica automáticamente.
+            </div>
+            <div id="marketItems"></div>
+            <div class="sep"></div>
+            <div style="padding:10px;background:var(--g2);border-radius:9px;margin-bottom:12px">
+              <div class="fr"><span class="fl b">Total pedido c/IVA</span><span id="marketTotal" style="color:var(--ora);font-weight:700">$0</span></div>
+              <div class="fr"><span class="fl">IVA crédito fiscal</span><span id="marketIva" style="color:var(--ver)">$0</span></div>
+              <div class="fr"><span class="fl">Neto s/IVA</span><span id="marketNeto">$0</span></div>
+            </div>
+            <button class="btn bp" style="width:100%" onclick="generarPedido()">📋 Generar resumen del pedido</button>
+          </div>
+          <div class="card" id="marketResumenCard" style="display:none">
+            <div class="ct">📋 Resumen del pedido</div>
+            <div id="marketResumen"></div>
+            <div class="sep"></div>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
+              <button class="btn bp" onclick="confirmarPedidoMarket()">✓ Confirmar — sumar al stock</button>
+              <button class="btn bs" onclick="copiarPedido()">📋 Copiar texto</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ALERTAS ══ -->
+      <div id="pg-alertas" class="view">
+        <div style="margin-bottom:1rem">
+          <div style="font-size:18px;font-weight:700">🔔 Alertas de stock</div>
+          <div style="font-size:13px;color:var(--gt);margin-top:2px">Productos que requieren atención. Se actualiza al cargar reportes y confirmar compras.</div>
+        </div>
+        <div id="alertasCnt">
+          <div style="text-align:center;padding:3rem;color:var(--gt)">
+            <div style="font-size:2.5rem;margin-bottom:1rem">🔔</div>
+            <div>Cargá un reporte para ver las alertas de stock.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ NUEVA MÁQUINA (admin) ══ -->
+      <div id="pg-nuevaMaquina" class="view admin-only">
+        <div style="margin-bottom:1rem">
+          <div style="font-size:18px;font-weight:700">+ Nueva máquina</div>
+          <div style="font-size:13px;color:var(--gt);margin-top:2px">Registrá una nueva máquina y asignala a un franquiciado o a VIN.</div>
+        </div>
+        <div class="card" style="max-width:480px">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div><label>Código de máquina</label><input type="text" id="nmCodigo" placeholder="E00226"></div>
+            <div><label>Nombre</label><input type="text" id="nmNombre" placeholder="SC-Palermo"></div>
+            <div><label>Tipo</label>
+              <select id="nmTipo">
+                <option value="VIN">VIN (máquina propia)</option>
+                <option value="Franquiciado">Franquiciado</option>
+              </select>
+            </div>
+            <div><label>Usuario asignado</label>
+              <select id="nmUsuario"><option value="">— seleccioná un usuario —</option></select>
+            </div>
+            <button class="btn bp" onclick="crearMaquina()">✓ Crear máquina</button>
+            <div id="nmMsg" style="font-size:12px;display:none"></div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -515,7 +671,11 @@ async function getStockSupa(maquinaId) {
 }
 
 async function saveStockSupa(maquinaId, rkey, gramos) {
-  return await sbUpsert('stock', {maquina_id: maquinaId, producto_rkey: rkey, gramos_actuales: gramos});
+  return await sbFetch('stock?on_conflict=maquina_id,producto_rkey', {
+    method: 'POST',
+    body: {maquina_id: maquinaId, producto_rkey: rkey, gramos_actuales: gramos, updated_at: new Date().toISOString()},
+    prefer: 'resolution=merge-duplicates,return=minimal'
+  });
 }
 
 // ══ SUPABASE COMPRAS ═════════════════════════════════════
@@ -616,11 +776,18 @@ function savMAQ(){
 async function syncStockSupa(code){
   const maq = MAQ[code];
   if(!maq || !maq.supaId) return;
-  // Actualizar stock por producto
-  for(const p of P){
-    const gs = maq.stock[p.rk] || 0;
-    await saveStockSupa(maq.supaId, p.rk, gs);
-  }
+  // Bulk upsert de todo el stock de una sola vez
+  const stockItems = P.map(p => ({
+    maquina_id: maq.supaId,
+    producto_rkey: p.rk,
+    gramos_actuales: maq.stock[p.rk] || 0,
+    updated_at: new Date().toISOString()
+  }));
+  await sbFetch('stock?on_conflict=maquina_id,producto_rkey', {
+    method: 'POST',
+    body: stockItems,
+    prefer: 'resolution=merge-duplicates,return=minimal'
+  });
 }
 function savPar(){PAR.MP=parseFloat($('pMp').value)||5;PAR.IVA=parseFloat($('pIv').value)||21;PAR.FR=parseFloat($('pFr').value)||10;PAR.AL=parseFloat($('pAl').value)||50;try{localStorage.setItem('v4_par',JSON.stringify(PAR));}catch(e){}}
 
@@ -808,19 +975,7 @@ function seleccionarMaquina(codigo){
   if($('mTp')) $('mTp').value = maq.tipo;
 }
 
-function renderSelectorMaquinas(){
-  const sel = $('maqSelect');
-  const inp = $('mNm');
-  const codigos = Object.keys(MAQ);
-  if(codigos.length > 1){
-    sel.innerHTML = codigos.map(c=>`<option value="${c}">${MAQ[c].name} (${c})</option>`).join('');
-    sel.style.display = '';
-    inp.style.display = 'none';
-  } else {
-    sel.style.display = 'none';
-    inp.style.display = '';
-  }
-}
+// renderSelectorMaquinas — ver versión más abajo
 function logout(){CU=null;CD=null;$('loginWrap').style.display='flex';$('app').style.display='none';$('lu').value='';$('lp').value='';}
 function enterApp(){
   $('loginWrap').style.display='none';$('app').style.display='block';
@@ -839,11 +994,12 @@ function enterApp(){
       if(gymBadge)gymBadge.style.display='inline';
     },100);
   }
+  renderSelectorMaquinas();
   go('carga');
 }
 
 // ── NAVEGACIÓN ────────────────────────────────────────────────
-const PTIT={carga:'Cargar reporte',resultado:'Resultado del mes',stock:'Stock',maquina:'Mi máquina',historial:'Historial',config:'Configuración',global:'Resumen global'};
+const PTIT={carga:'Cargar reporte',resultado:'Resultado del mes',stock:'Stock',maquina:'Mi máquina',historial:'Historial',market:'VIN Market',alertas:'Alertas de stock',nuevaMaquina:'Nueva máquina',config:'Configuración',global:'Resumen global'};
 function go(n){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(x=>x.classList.remove('on'));
@@ -853,6 +1009,12 @@ function go(n){
   if(n==='config')renderCfg();
   if(n==='historial')renderHist();
   if(n==='global')renderGlobal();
+  if(n==='market')renderMarket();
+  if(n==='alertas')renderAlertas();
+  if(n==='nuevaMaquina')renderNuevaMaquina();
+  if(n==='market')renderMarket();
+  if(n==='alertas')renderAlertas();
+  if(n==='nuevaMaquina')renderNuevaMaquina();
   if(n==='maquina')renderMaquina();
   if(n==='stock'){
     const _code=$('mCd').value||'E00225';
@@ -1795,6 +1957,239 @@ const dz=$('dz');
 dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
 dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
 dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');const f=e.dataTransfer.files[0];if(f)handleFile(f);});
+
+
+// ══ MÚLTIPLES MÁQUINAS ══════════════════════════════════
+let MAQ_ACTIVA = null;
+
+function cambiarMaquina(codigo){
+  if(!codigo||!MAQ[codigo])return;
+  MAQ_ACTIVA=codigo;
+  const maq=MAQ[codigo];
+  $('mNm').value=maq.name;
+  $('mCd').value=codigo;
+  if($('mTp'))$('mTp').value=maq.tipo;
+  const stNm=$('stMaqNm');if(stNm)stNm.textContent=maq.name;
+  recalcStock(maq);
+  updateAlertaBadge();
+}
+
+function renderSelectorMaquinas(){
+  const codigos=Object.keys(MAQ);
+  const wrap=$('maqSelectorWrap');const sel=$('sidebarMaqSelect');
+  if(!wrap||!sel)return;
+  if(!codigos.length){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  sel.innerHTML=codigos.map(c=>`<option value="${c}" ${c===MAQ_ACTIVA?'selected':''}>${MAQ[c].name} (${c})</option>`).join('');
+  if(!MAQ_ACTIVA&&codigos.length)cambiarMaquina(codigos[0]);
+}
+
+function updateAlertaBadge(){
+  const icon=$('alertaIcon');if(!icon)return;
+  const code=MAQ_ACTIVA||$('mCd').value||'E00225';
+  const maq=MAQ[code];if(!maq){icon.textContent='🔔';return;}
+  const alertP=PAR.AL/100;
+  const hay=P.some(p=>{
+    if(maq.inactivos&&maq.inactivos[p.rk])return false;
+    if(!maq.ci[p.rk]||!maq.ci[p.rk].potes)return false;
+    return(maq.stock[p.rk]||0)<=p.rs*p.pG*alertP;
+  });
+  icon.textContent=hay?'🔔🔴':'🔔';
+}
+
+// ══ VIN MARKET ════════════════════════════════════════════
+function renderMarket(){
+  const code=MAQ_ACTIVA||$('mCd').value||'E00225';
+  const maq=MAQ[code]||getMaq(code);
+  const esVIN=maq.tipo==='VIN';
+  const IVA=PAR.IVA/100;
+  let html='';
+  P.forEach(p=>{
+    const ci=maq.ci[p.rk];if(!ci||!ci.potes)return;
+    if(maq.inactivos&&maq.inactivos[p.rk])return;
+    const precioChico=p.com*(1-(esVIN?p.d:p.uf));
+    const precioGrande=p.com*(1-(esVIN?p.d:(p.dg||p.uf)));
+    const gs=maq.stock[p.rk]||0;
+    const potes=(gs/p.pG).toFixed(1);
+    const enAlerta=gs<=p.rs*p.pG*(PAR.AL/100);
+    html+=`<div style="padding:10px 0;border-bottom:1px solid #1d1d1d">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:140px">
+          <div style="font-size:13px;font-weight:600">${p.i} <span class="bdg ${getMB(p.m)}">${p.m}</span>${enAlerta?' <span class="bdg bre" style="font-size:9px">⚠ BAJO</span>':''}</div>
+          <div style="font-size:11px;color:var(--gt);margin-top:2px">Stock: ${potes} potes · Unitario: $${Math.round(precioChico).toLocaleString('es-AR')} · Caja ${p.cj||6}u: <span style="color:var(--ver)">$${Math.round(precioGrande).toLocaleString('es-AR')} (−${Math.round((p.dg||p.uf)*100)}%)</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="number" id="mkt_${p.rk}" value="0" min="0" max="99"
+            data-chico="${precioChico}" data-grande="${precioGrande}" data-cj="${p.cj||6}" data-pg="${p.pG}"
+            oninput="recalcMarket()"
+            style="width:65px;text-align:center;background:var(--g2);border:1px solid var(--gb);border-radius:7px;padding:6px;color:var(--bla);font-size:14px">
+          <span style="font-size:11px;color:var(--gt)">potes</span>
+          <span id="mktP_${p.rk}" style="min-width:85px;text-align:right;font-size:12px;color:var(--ora)">$0</span>
+        </div>
+      </div>
+    </div>`;
+  });
+  $('marketItems').innerHTML=html;
+  $('marketResumenCard').style.display='none';
+  recalcMarket();
+}
+
+function recalcMarket(){
+  const IVA=PAR.IVA/100;
+  let total=0,ivaTotal=0;
+  document.querySelectorAll('[id^="mkt_"]').forEach(inp=>{
+    const rk=inp.id.replace('mkt_','');
+    const potes=parseFloat(inp.value)||0;
+    const chico=parseFloat(inp.dataset.chico)||0;
+    const grande=parseFloat(inp.dataset.grande)||0;
+    const cj=parseFloat(inp.dataset.cj)||6;
+    const precio=potes>=cj?grande:chico;
+    const costo=potes*precio;
+    total+=costo;ivaTotal+=costo*IVA/(1+IVA);
+    const el=$('mktP_'+rk);
+    if(el){el.textContent=potes>0?'$'+Math.round(costo).toLocaleString('es-AR'):'$0';el.style.color=potes>=cj&&cj>0?'var(--ver)':'var(--ora)';}
+  });
+  const neto=total/(1+IVA);
+  const mt=$('marketTotal'),mi=$('marketIva'),mn=$('marketNeto');
+  if(mt)mt.textContent='$'+Math.round(total).toLocaleString('es-AR');
+  if(mi)mi.textContent='$'+Math.round(ivaTotal).toLocaleString('es-AR');
+  if(mn)mn.textContent='$'+Math.round(neto).toLocaleString('es-AR');
+}
+
+function generarPedido(){
+  const code=MAQ_ACTIVA||$('mCd').value||'E00225';
+  const maq=MAQ[code]||getMaq(code);
+  const IVA=PAR.IVA/100;
+  const items=[];let total=0,iva=0;
+  document.querySelectorAll('[id^="mkt_"]').forEach(inp=>{
+    const rk=inp.id.replace('mkt_','');
+    const potes=parseFloat(inp.value)||0;if(!potes)return;
+    const p=P.find(x=>x.rk===rk);if(!p)return;
+    const chico=parseFloat(inp.dataset.chico)||0;
+    const grande=parseFloat(inp.dataset.grande)||0;
+    const cj=parseFloat(inp.dataset.cj)||6;
+    const precio=potes>=cj?grande:chico;
+    const costo=potes*precio;const ivaItem=costo*IVA/(1+IVA);
+    total+=costo;iva+=ivaItem;
+    items.push({rk,nombre:p.i,potes,precio,costo,ivaItem,esCaja:potes>=cj,cj});
+  });
+  if(!items.length){alert('Agregá al menos un producto.');return;}
+  const fecha=new Date().toLocaleDateString('es-AR');
+  let resHtml=`<div style="font-size:12px;color:var(--gt);margin-bottom:10px">${fecha} — Máquina: <strong style="color:var(--bla)">${maq.name}</strong></div>`;
+  let txt=`PEDIDO VIN MARKET\nFecha: ${fecha}\nMáquina: ${maq.name} (${code})\n\n`;
+  items.forEach(it=>{
+    resHtml+=`<div class="fr"><span class="fl">${it.nombre}${it.esCaja?' <span class="bdg bve" style="font-size:9px">CAJA</span>':''}</span><span>${it.potes} potes · <strong style="color:var(--ora)">$${Math.round(it.costo).toLocaleString('es-AR')}</strong></span></div>`;
+    txt+=`${it.nombre}: ${it.potes} potes = $${Math.round(it.costo).toLocaleString('es-AR')}${it.esCaja?' (caja completa)':''}\n`;
+  });
+  resHtml+=`<div class="fr sub"><span class="fl b">Total c/IVA</span><span style="color:var(--ora);font-weight:700">$${Math.round(total).toLocaleString('es-AR')}</span></div>`;
+  resHtml+=`<div class="fr"><span class="fl">IVA crédito</span><span style="color:var(--ver)">$${Math.round(iva).toLocaleString('es-AR')}</span></div>`;
+  txt+=`\nTOTAL: $${Math.round(total).toLocaleString('es-AR')} (IVA: $${Math.round(iva).toLocaleString('es-AR')})`;
+  $('marketResumen').innerHTML=resHtml;
+  const card=$('marketResumenCard');card.style.display='';
+  card.dataset.items=JSON.stringify(items);card.dataset.txt=txt;
+  card.dataset.total=total;card.dataset.iva=iva;
+}
+
+function confirmarPedidoMarket(){
+  const code=MAQ_ACTIVA||$('mCd').value||'E00225';
+  const maq=getMaq(code);
+  const card=$('marketResumenCard');
+  const items=JSON.parse(card.dataset.items||'[]');
+  const total=parseFloat(card.dataset.total||0);
+  const ivaCompra=parseFloat(card.dataset.iva||0);
+  if(!items.length)return;
+  const btn=event.target;btn.disabled=true;btn.textContent='⏳ Confirmando...';
+  const detalle=[];
+  items.forEach(it=>{
+    const p=P.find(x=>x.rk===it.rk);
+    maq.stock[it.rk]=(maq.stock[it.rk]||0)+it.potes*(p?p.pG:0);
+    detalle.push({rk:it.rk,nombre:it.nombre,potes:it.potes,precio:it.precio,costoItem:it.costo,ivaItem:it.ivaItem});
+  });
+  if(!maq.compras)maq.compras=[];
+  maq.compras.unshift({id:Date.now(),fecha:new Date().toLocaleDateString('es-AR'),period:'Market',detalle,totalCompra:total,ivaCompra});
+  recalcStock(maq);recalcInv(maq);savMAQ();
+  btn.disabled=false;btn.textContent='✓ Confirmado';btn.style.background='var(--ver)';
+  card.style.display='none';
+  document.querySelectorAll('[id^="mkt_"]').forEach(inp=>inp.value=0);
+  recalcMarket();updateAlertaBadge();
+  const n=document.createElement('div');n.textContent='✓ Stock actualizado';
+  n.style.cssText='position:fixed;bottom:1.5rem;right:1.5rem;background:var(--ver);color:#fff;padding:10px 18px;border-radius:9px;font-size:13px;font-weight:600;z-index:300';
+  document.body.appendChild(n);setTimeout(()=>n.remove(),3000);
+}
+
+function copiarPedido(){
+  const txt=$('marketResumenCard').dataset.txt||'';
+  navigator.clipboard.writeText(txt).then(()=>{
+    const btn=event.target;const orig=btn.textContent;
+    btn.textContent='✓ Copiado';btn.style.background='var(--ver)';
+    setTimeout(()=>{btn.textContent=orig;btn.style.background='';},1500);
+  });
+}
+
+// ══ ALERTAS ═══════════════════════════════════════════════
+function renderAlertas(){
+  const codigos=Object.keys(MAQ);
+  if(!codigos.length){$('alertasCnt').innerHTML='<div style="text-align:center;padding:3rem;color:var(--gt)">Sin máquinas.</div>';return;}
+  const alertP=PAR.AL/100;let hayAlertas=false;let html='';
+  codigos.forEach(code=>{
+    const maq=MAQ[code];recalcStock(maq);
+    const alertas=P.filter(p=>{
+      if(maq.inactivos&&maq.inactivos[p.rk])return false;
+      if(!maq.ci[p.rk]||!maq.ci[p.rk].potes)return false;
+      return(maq.stock[p.rk]||0)<=p.rs*p.pG*alertP;
+    });
+    if(!alertas.length)return;
+    hayAlertas=true;
+    html+=`<div class="card" style="border-color:var(--roj);margin-bottom:.875rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div><div style="font-size:15px;font-weight:700">${maq.name} <span style="font-size:11px;color:var(--gt)">${code}</span></div>
+        <div style="font-size:12px;color:var(--gt)">${maq.tipo}</div></div>
+        <button class="btn bp bsm" onclick="cambiarMaquina('${code}');go('market')">🛒 Reponer</button>
+      </div>
+      <table><thead><tr><th>Producto</th><th style="text-align:right">Stock</th><th style="text-align:right">Mínimo</th><th style="text-align:right">Estado</th></tr></thead>
+      <tbody>${alertas.map(p=>{
+        const gs=maq.stock[p.rk]||0;
+        const st=gs<=0?'🚨 Sin stock':'⚠ Bajo';
+        return `<tr><td><strong>${p.i}</strong> <span class="bdg ${getMB(p.m)}">${p.m}</span></td>
+          <td style="text-align:right;color:var(--roj)">${(gs/p.pG).toFixed(2)} potes</td>
+          <td style="text-align:right;color:var(--gt)">${p.rs} pote(s)</td>
+          <td style="text-align:right"><span class="bdg bre">${st}</span></td></tr>`;
+      }).join('')}</tbody></table></div>`;
+  });
+  if(!hayAlertas)html=`<div class="card cv"><div style="display:flex;align-items:center;gap:14px"><div style="font-size:2.5rem">✅</div><div><div style="font-weight:700;color:var(--ver);font-size:15px">Todo en buen nivel</div><div style="font-size:13px;color:var(--gt);margin-top:4px">Ningún producto bajó del ${PAR.AL}% de reserva.</div></div></div></div>`;
+  $('alertasCnt').innerHTML=html;
+}
+
+// ══ NUEVA MÁQUINA ═════════════════════════════════════════
+async function renderNuevaMaquina(){
+  const sel=$('nmUsuario');if(!sel)return;
+  if(ONLINE_MODE){
+    const users=await sbGet('usuarios');
+    if(users)sel.innerHTML='<option value="">— seleccioná —</option>'+users.map(u=>`<option value="${u.id}">${u.nombre} (${u.username})</option>`).join('');
+  }
+}
+
+async function crearMaquina(){
+  const codigo=$('nmCodigo').value.trim().toUpperCase();
+  const nombre=$('nmNombre').value.trim();
+  const tipo=$('nmTipo').value;
+  const usuarioId=$('nmUsuario').value;
+  const msg=$('nmMsg');
+  if(!codigo||!nombre){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Completá código y nombre.';return;}
+  const btn=event.target;btn.disabled=true;btn.textContent='⏳ Creando...';
+  const ci={};P.forEach(p=>{ci[p.rk]={potes:0,precio:p.com*(1-p.d)};});
+  const stk={};P.forEach(p=>{stk[p.rk]=0;});
+  const newMaq={name:nombre,code:codigo,tipo,ci,stock:stk,meses:[],compras:[],invTotal:0,ivaCredTotal:0,fechaAlta:new Date().toLocaleDateString('es-AR'),inactivos:{}};
+  if(ONLINE_MODE){
+    const res=await sbPost('maquinas',{codigo,nombre,tipo,usuario_id:usuarioId||null});
+    if(res&&res[0])newMaq.supaId=res[0].id;
+    else{msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error — el código ya existe.';btn.disabled=false;btn.textContent='✓ Crear máquina';return;}
+  }
+  MAQ[codigo]=newMaq;savMAQ();renderSelectorMaquinas();
+  msg.style.display='block';msg.style.color='var(--ver)';msg.textContent=`✓ Máquina ${nombre} (${codigo}) creada.`;
+  $('nmCodigo').value='';$('nmNombre').value='';
+  btn.disabled=false;btn.textContent='✓ Crear máquina';
+}
 
 
 // ── COMPRA MANUAL ────────────────────────────────────────────
