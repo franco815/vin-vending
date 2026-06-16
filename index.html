@@ -7,7 +7,7 @@
 <style>
 :root{--neg:#0A0A0A;--ora:#E8820C;--ora2:#C46E08;--ora3:#F59C2E;--bla:#FFFFFF;--g1:#1A1A1A;--g2:#242424;--g3:#2E2E2E;--gb:#383838;--gt:#999;--ver:#22C55E;--roj:#EF4444;--azu:#3B82F6;--ama:#F59E0B}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--neg);color:var(--bla);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh;overflow:hidden}
+body{background:var(--neg);color:var(--bla);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh}
 /* LOGIN */
 .lbox{width:100%;max-width:370px;padding:2.5rem;background:var(--g1);border:1px solid var(--gb);border-radius:16px;text-align:center}
 .lbox img{width:160px;margin:0 auto 2rem;display:block}
@@ -40,7 +40,7 @@ body{background:var(--neg);color:var(--bla);font-family:-apple-system,BlinkMacSy
 .boutl{width:100%;background:transparent;border:1px solid var(--gb);border-radius:8px;padding:7px;color:var(--gt);font-size:12px;cursor:pointer;transition:all .12s}
 .boutl:hover{border-color:var(--roj);color:var(--roj)}
 /* MAIN */
-.main{margin-left:216px;height:100vh;overflow-y:auto}
+.main{margin-left:216px;min-height:100vh}
 .topbar{height:54px;border-bottom:1px solid var(--gb);display:flex;align-items:center;justify-content:space-between;padding:0 1.375rem;background:var(--neg);position:sticky;top:0;z-index:50}
 .tbt{font-size:15px;font-weight:600}
 .cnt{padding:1.375rem}
@@ -141,8 +141,10 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
 /* RESPONSIVE */
 @media(max-width:860px){.sb{width:54px}.sb-logo,.un,.ur,.nsec,.ni span{display:none}.main{margin-left:54px}.mg4{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}}
 @media(max-width:560px){.sb{display:none}.main{margin-left:0}.mg4{grid-template-columns:1fr}}
-#loginWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--neg);z-index:999}
-#app{display:none;min-height:100vh}
+
+
+#loginWrap{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--neg)}
+#app{display:none}
 </style>
 </head>
 <body>
@@ -174,15 +176,16 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
         <select id="sidebarMaqSelect" onchange="cambiarMaquina(this.value)" style="width:100%;background:var(--g2);border:1px solid var(--gb);border-radius:7px;padding:6px 9px;color:var(--bla);font-size:12px;outline:none"></select>
         <button class="btn bp bsm admin-only" style="width:100%;margin-top:5px;font-size:11px" onclick="go('nuevaMaquina')">+ Nueva maquina</button>
       </div>
-      <div class="nsec">Principal</div>
+      <div class="nsec">Esta máquina</div>
       <div class="ni on" onclick="go('carga')"><span class="nic">📤</span><span>Cargar reporte</span></div>
       <div class="ni" onclick="go('resultado')"><span class="nic">📊</span><span>Resultado del mes</span></div>
       <div class="ni" onclick="go('stock')"><span class="nic">📦</span><span>Stock</span></div>
       <div class="ni" onclick="go('maquina')"><span class="nic">🏭</span><span>Mi máquina</span></div>
       <div class="ni" onclick="go('historial')"><span class="nic">🕐</span><span>Historial</span></div>
+      <div class="nsec">Red de máquinas</div>
+      <div class="ni" onclick="go('alertas')"><span class="nic" id="alertaIcon">🔔</span><span>Stock &amp; Alertas</span></div>
       <div class="ni" onclick="go('market')"><span class="nic">🛒</span><span>VIN Market</span></div>
-      <div class="ni" onclick="go('alertas')"><span class="nic" id="alertaIcon">🔔</span><span>Alertas</span></div>
-      <div class="nsec admin-only">Admin VIN</div>
+      <div class="nsec admin-only">Gestión VIN</div>
       <div class="ni admin-only" onclick="go('config')"><span class="nic">⚙️</span><span>Configuración</span></div>
       <div class="ni admin-only" onclick="go('global')"><span class="nic">🌐</span><span>Resumen global</span></div>
     </nav>
@@ -478,6 +481,7 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
             <div style="min-width:80px"><label>IVA %</label><input type="number" id="pIv" value="21" step=".1" style="width:80px" onchange="savePar()"></div>
             <div style="min-width:150px"><label>Util. franq. base %</label><input type="number" id="pFr" value="10" step=".5" style="width:80px" onchange="savePar()"></div>
             <div style="min-width:140px"><label>Alerta stock %</label><input type="number" id="pAl" value="50" step="5" style="width:80px" onchange="savePar()"></div>
+            <div style="min-width:180px"><label>Piso facturación franq. $</label><input type="number" id="pPiso" value="1000000" step="50000" style="width:120px" onchange="savePar()"></div>
           </div>
         </div>
       </div>
@@ -593,7 +597,7 @@ let CB=[
   {g:'Carbo Energy Fruit Punch + Creatina',   i:'Carbo Energy + Creatina',       pv:2950,k1:'carbo',   k2:'crea'},
   {g:'Colagen Sport Naranja + Creatina',      i:'Colágeno + Creatina',           pv:3750,k1:'cola',    k2:'crea'},
 ];
-let PAR={MP:5,IVA:21,FR:10,AL:50};
+let PAR={MP:5,IVA:21,FR:10,AL:50,PISO:1000000};
 
 // Máquinas: { [code]: { name, code, tipo, ci:{rk:{potes,precio}}, stock:{rk:gs}, meses:[], invTotal, ivaCredTotal } }
 let MAQ={};
@@ -605,7 +609,7 @@ function loadLS(){
   try{
     const p=localStorage.getItem('v4_p');if(p)P=JSON.parse(p);
     const c=localStorage.getItem('v4_c');if(c)CB=JSON.parse(c);
-    const pr=localStorage.getItem('v4_par');if(pr)PAR=JSON.parse(pr);
+    const pr=localStorage.getItem('v4_par');if(pr){const _p=JSON.parse(pr);PAR=Object.assign({PISO:1000000},_p);}
     const m=localStorage.getItem('v4_maq');if(m)MAQ=JSON.parse(m);
   }catch(e){}
 }
@@ -759,7 +763,7 @@ function updateAlertaBadge(){
 }
 function logout(){CU=null;CD=null;$('loginWrap').style.display='flex';$('app').style.display='none';$('lu').value='';$('lp').value='';}
 function enterApp(){
-  $('loginWrap').style.display='none';$('app').style.display='block';window.scrollTo(0,0);
+  $('loginWrap').style.display='none';$('app').style.display='block';
   $('sNm').textContent=CU.name;$('sRl').textContent=CU.role==='admin'?'Administrador':'Franquiciado';$('sAv').textContent=CU.av;$('tusr').textContent=CU.name;
   document.querySelectorAll('.admin-only').forEach(el=>el.style.display=CU.role==='admin'?'':'none');
   if(CU.role==='franq'){
@@ -780,7 +784,7 @@ function enterApp(){
 }
 
 // ── NAVEGACIÓN ────────────────────────────────────────────────
-const PTIT={carga:'Cargar reporte',resultado:'Resultado del mes',stock:'Stock',maquina:'Mi máquina',historial:'Historial',market:'VIN Market',alertas:'Alertas',nuevaMaquina:'Nueva maquina',config:'Configuración',global:'Resumen global'};
+const PTIT={carga:'Cargar reporte',resultado:'Resultado del mes',stock:'Stock',maquina:'Mi máquina',historial:'Historial',market:'VIN Market',alertas:'Stock & Alertas',nuevaMaquina:'Nueva maquina',config:'Configuración',global:'Resumen global'};
 function go(n){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(x=>x.classList.remove('on'));
@@ -923,7 +927,7 @@ function renderResults(d){
   const ivaCargaInicial=maq.ivaCredTotal||0;
   const ivaPag=Math.max(0,ivaV-ivaC-ivaCargaInicial);
   const ivaCargaInicialMostrar=ivaCargaInicial>0?ivaCargaInicial:0;
-  const comG=fact*gymP;const prevI=utilBruta*impP;
+  const baseComVIN=(!esVIN)?Math.max(fact,PAR.PISO):fact;const comG=baseComVIN*gymP;const prevI=utilBruta*impP;
   const utilNeta=utilBruta-ivaPag-comG-prevI;
   const utilConRepo=utilNeta-(costoRepoTotal/(1+IVA));
 
@@ -963,7 +967,7 @@ function renderResults(d){
     {k:'− Gastos operativos neto',           v:'− '+peso(gOpN), c:'var(--roj)'},
     {k:'Utilidad bruta real',                 v:peso(utilBruta),c:'var(--ver)',sub:true},
     {k:'− IVA a pagar',                      v:'− '+peso(ivaPag),c:'var(--roj)'},
-    {k:'− '+$('gGn').value+' ('+$('gGp').value+'%)',v:'− '+peso(comG),c:'var(--roj)'},
+    {k:'− '+$('gGn').value+' ('+$('gGp').value+'% s/'+((!esVIN&&fact<PAR.PISO)?'piso $'+Math.round(PAR.PISO/1000)+'k':'fact. real')+')',v:'− '+peso(comG),c:'var(--roj)'},
     {k:'− '+$('gIn').value+' ('+$('gIp').value+'%)',v:'− '+peso(prevI),c:'var(--roj)'},
     {k:'UTILIDAD NETA DEL MES',              v:peso(utilNeta), c:utilNeta>=0?'var(--ora)':'var(--roj)',tot:true},
   ].map(r=>`<div class="fr${r.sub?' sub':r.tot?' tot':''}">
@@ -1717,7 +1721,7 @@ function renderCfg(){
     <td><input type="text" value="${c.k2}" onchange="CB[${i}].k2=this.value" style="font-family:monospace;width:68px"></td>
     <td><button class="btn bg bsm" style="color:var(--roj);border-color:transparent" onclick="CB.splice(${i},1);renderCfg()">✕</button></td>
   </tr>`).join('');
-  $('pMp').value=PAR.MP;$('pIv').value=PAR.IVA;$('pFr').value=PAR.FR;$('pAl').value=PAR.AL;
+  $('pMp').value=PAR.MP;$('pIv').value=PAR.IVA;$('pFr').value=PAR.FR;$('pAl').value=PAR.AL;if($('pPiso'))$('pPiso').value=PAR.PISO||1000000;
 }
 function saveCfg(){try{localStorage.setItem('v4_p',JSON.stringify(P));localStorage.setItem('v4_c',JSON.stringify(CB));savPar();renderCfg();const btn=event.target;btn.textContent='✓';btn.style.background='var(--ver)';setTimeout(()=>{btn.textContent='✓ Guardar';btn.style.background='';},1400);}catch(e){}}
 
