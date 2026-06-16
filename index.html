@@ -840,19 +840,7 @@ const DEMOS={
     ind:{'Whey Protein Vainilla':8,'Whey Protein Chocolate':3,'Whey Protein Cookies Cream':7,'Creatina Micronizada':15,'Carbo Energy Fruit Punch':8,'Pre Entreno Fuit Punch':3,'Colagen Sport Naranja':4},
     comb:{'Whey Protein Vainilla + Creatina':5,'Whey Protein Chocolate + Creatina':3,'Whey Protein Cookies Cream + Creatina':4,'Carbo Energy Fruit Punch + Creatina':1}},
 };
-function demo(mes){
-  const d=Object.assign({},DEMOS[mes]);
-  // Usar la máquina activa si hay una seleccionada
-  const activaCode=$('mCd').value||d.code;
-  const activaMaq=MAQ[activaCode];
-  if(activaMaq&&activaCode!==d.code){
-    d.code=activaCode;
-    d.name=activaMaq.name||activaCode;
-    d.tipo=activaMaq.tipo||d.tipo;
-  }
-  $('mNm').value=d.name;$('mCd').value=d.code;$('mPr').value=d.period;$('mTp').value=d.tipo;
-  renderResults(d);
-}
+function demo(mes){const d=DEMOS[mes];$('mNm').value=d.name;$('mCd').value=d.code;$('mPr').value=d.period;$('mTp').value=d.tipo;renderResults(d);}
 
 // ── ARCHIVO ───────────────────────────────────────────────────
 function handleFile(f){
@@ -911,7 +899,7 @@ function renderResults(d){
     const f=cnt*p.pv;fact+=f;
     const neto=p.pv/(1+IVA);
     const costoVIN=p.com*(1-p.d);
-    const costoPote=esVIN?costoVIN:p.com*(1-p.uf); // franq = comercial × (1-desc%)
+    const costoPote=esVIN?costoVIN:p.com*0.90; // franq = comercial × 0.90 (−10% fijo)
     const costoSbruto=costoPote/p.sv;             // costo/serv c/IVA
     const costoS=costoSbruto/(1+IVA);            // costo/serv neto s/IVA
     const util=(neto-costoS)*cnt;utilProd+=util;
@@ -923,7 +911,7 @@ function renderResults(d){
     const c=CB.find(x=>x.g===gn);if(!c||!cnt)return;
     const f=cnt*c.pv;fact+=f;
     let costoC=0;
-    [c.k1,c.k2].forEach(k=>{const p=P.find(x=>x.rk===k);if(!p)return;const cv=p.com*(1-p.d);const cp=esVIN?cv:p.com*(1-p.uf);costoC+=(cp/p.sv)/(1+IVA);consGs[k]+=cnt*(p.pG/p.sv);});
+    [c.k1,c.k2].forEach(k=>{const p=P.find(x=>x.rk===k);if(!p)return;const cv=p.com*(1-p.d);const cp=esVIN?cv:p.com*0.90;costoC+=(cp/p.sv)/(1+IVA);consGs[k]+=cnt*(p.pG/p.sv);});
     const neto=c.pv/(1+IVA);const util=(neto-costoC)*cnt;utilProd+=util;
     const gananciaComboS=c.pv-costoC*(1+IVA); const gananciaCombo=gananciaComboS*cnt;
     rows.push({nombre:c.i,marca:'Combo',unid:cnt,fact:f,pvu:c.pv,costoS:costoC,neto,utilS:neto-costoC,util,gananciaS:gananciaComboS||0,ganancia:gananciaCombo||0,tipo:'comb'});
@@ -938,7 +926,7 @@ function renderResults(d){
     const comb=ccMap[p.rk]||0;
     const tot=indiv+comb;if(!tot)return;
     const gs=p.pG/p.sv;const gsTotal=tot*gs;const dec=tot/p.sv;const potes=Math.ceil(dec);
-    const cv=p.com*(1-p.d);const cp=esVIN?cv:p.com*(1-p.uf);const costoItem=potes*cp;
+    const cv=p.com*(1-p.d);const cp=esVIN?cv:p.com*0.90;const costoItem=potes*cp;
     costoRepoTotal+=costoItem;
     repoItems.push({p,indiv,comb,tot,gs,gsTotal,dec,potes,cp,costoItem});
   });
@@ -1055,7 +1043,7 @@ function renderResults(d){
     if(tras<=alertGsReal){
       const objGs=Math.max(...Object.values({...{[p.rk]:(CI_SUGE[p.rk]||p.rs+1)*p.pG},...{[p.rk]:(maq.ci[p.rk]?.potes||p.rs+1)*p.pG}}));
       const aComp=Math.max(0,objGs-tras);const potes=Math.ceil(aComp/p.pG);
-      const cv=p.com*(1-p.d);const cp=esVIN?cv:cv*(1+p.uf);const costo=potes*cp;const ivaC2=costo*PAR.IVA/100/(1+PAR.IVA/100);
+      const cv=p.com*(1-p.d);const cp=esVIN?cv:p.com*0.90;const costo=potes*cp;const ivaC2=costo*PAR.IVA/100/(1+PAR.IVA/100);
       nec.push({p,tras,resGs,potes,costo,ivaC2,st:tras<=0?'crit':tras<=alertGs*.25?'alert':'warn'});
     }
   });
@@ -1076,7 +1064,7 @@ function renderResults(d){
       // Si a este ritmo me quedo sin stock antes de fin del próximo mes
       if(mesesRestantes<1.5&&!nec.find(x=>x.p.rk===p.rk)){
         const potesAComprar=Math.ceil(potesConsumidos); // reponer lo que consumí el mes anterior
-        const cv=p.com*(1-p.d);const cpFranq=esVIN?cv:p.com*(1-p.uf);
+        const cv=p.com*(1-p.d);const cpFranq=esVIN?cv:p.com*0.90;
         sugeridos.push({p,consumoPrevGs,potesConsumidos,potesAComprar,
           stock:stockActual,mesesRestantes,
           costo:potesAComprar*cpFranq});
@@ -1517,7 +1505,7 @@ function updateCITotals(maq){
   let totChico=0;
   P.forEach(p=>{
     const ci=maq.ci[p.rk];if(!ci||!ci.potes)return;
-    const precioChico=p.com*(1-(p.uf||0.10));
+    const precioChico=p.com*0.90;
     totChico+=ci.potes*precioChico;
   });
   const ahorro=totChico-totB;
@@ -1789,7 +1777,7 @@ function abrirCompraManual(){
     const ci = maq.ci[p.rk];
     if(!ci || !ci.potes) return; // solo productos con CI
     const costoVIN = p.com*(1-p.d);
-    const precio = esVIN ? costoVIN : p.com*(1-p.uf);
+    const precio = esVIN ? costoVIN : p.com*0.90;
     html += `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #1d1d1d">
       <div style="flex:1;font-size:13px"><strong>${p.i}</strong> <span class="bdg ${getMB(p.m)}" style="font-size:9px">${p.m}</span></div>
       <div style="font-size:11px;color:var(--gt)">$${Math.round(precio).toLocaleString('es-AR')}/pote</div>
@@ -2163,7 +2151,7 @@ async function crearMaquina(){
         headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Content-Type':'application/json','Prefer':'return=representation'},
         body:JSON.stringify({codigo:codigo,nombre:nombre,tipo:tipo,usuario_id:usuarioId||null})
       });
-      if(!insertRes.ok){var e=await insertRes.text();console.error('Error:',e);msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error al crear ('+insertRes.status+'). Intentá de nuevo.';btn.disabled=false;btn.textContent='Crear maquina';return;}
+      if(!insertRes.ok){var et=await insertRes.text();console.error('Error:',et);msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error al crear ('+insertRes.status+'). Intentá de nuevo.';btn.disabled=false;btn.textContent='Crear maquina';return;}
       var insertData=await insertRes.json().catch(function(){return null;});
       if(insertData&&Array.isArray(insertData)&&insertData[0]){newMaq.supaId=insertData[0].id;}
       else{var buscar=await sbGet('maquinas','codigo=eq.'+codigo);if(buscar&&buscar[0])newMaq.supaId=buscar[0].id;}
