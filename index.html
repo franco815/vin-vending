@@ -142,10 +142,8 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
 @media(max-width:860px){.sb{width:54px}.sb-logo,.un,.ur,.nsec,.ni span{display:none}.main{margin-left:54px}.mg4{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}}
 @media(max-width:560px){.sb{display:none}.main{margin-left:0}.mg4{grid-template-columns:1fr}}
 
-
 #loginWrap{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--neg)}
-#app{display:none}
-</style>
+#app{display:none}</style>
 </head>
 <body>
 
@@ -183,7 +181,7 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
       <div class="ni" onclick="go('maquina')"><span class="nic">🏭</span><span>Mi máquina</span></div>
       <div class="ni" onclick="go('historial')"><span class="nic">🕐</span><span>Historial</span></div>
       <div class="nsec">Red de máquinas</div>
-      <div class="ni" onclick="go('alertas')"><span class="nic" id="alertaIcon">🔔</span><span>Stock &amp; Alertas</span></div>
+      <div class="ni" onclick="go('alertas')"><span class="nic" id="alertaIcon">🗂️</span><span>Stock &amp; Alertas</span></div>
       <div class="ni" onclick="go('market')"><span class="nic">🛒</span><span>VIN Market</span></div>
       <div class="nsec admin-only">Gestión VIN</div>
       <div class="ni admin-only" onclick="go('config')"><span class="nic">⚙️</span><span>Configuración</span></div>
@@ -357,10 +355,10 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
             </div>
             <div style="display:flex;gap:7px;align-items:center">
               <button class="btn bp bsm" id="btnGuardarStock" onclick="event.stopPropagation();saveStock()">💾 Guardar</button>
-              <span id="ciToggleIcon" style="color:var(--gt);font-size:16px">▼</span>
+              <span id="ciToggleIcon" style="color:var(--gt);font-size:16px">▲</span>
             </div>
           </div>
-          <div id="ciPanel" style="display:none;margin-top:.875rem">
+          <div id="ciPanel" style="display:block;margin-top:.875rem">
             <div style="overflow-x:auto">
             <table id="ciTable">
               <thead><tr>
@@ -481,17 +479,23 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
             <div style="min-width:80px"><label>IVA %</label><input type="number" id="pIv" value="21" step=".1" style="width:80px" onchange="savePar()"></div>
             <div style="min-width:150px"><label>Util. franq. base %</label><input type="number" id="pFr" value="10" step=".5" style="width:80px" onchange="savePar()"></div>
             <div style="min-width:140px"><label>Alerta stock %</label><input type="number" id="pAl" value="50" step="5" style="width:80px" onchange="savePar()"></div>
-            <div style="min-width:180px"><label>Piso facturación franq. $</label><input type="number" id="pPiso" value="1000000" step="50000" style="width:120px" onchange="savePar()"></div>
+            <div style="min-width:200px"><label>Piso facturación franq. $</label><input type="number" id="pPiso" value="1000000" step="50000" style="width:130px" onchange="savePar()"></div>
           </div>
         </div>
       </div>
-
-      <!-- ══ DANGER ZONE ══ -->
-      <div class="card admin-only" style="border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04);margin-top:0">
-        <div class="ct" style="color:var(--roj)">⚠ Zona de reinicio</div>
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
           <div style="font-size:13px;color:var(--gt)">Borra todos los datos guardados — máquinas, stock, historial y configuración. Usalo solo para empezar de cero en una máquina nueva o para limpiar datos de prueba.</div>
           <button class="btn bsm" style="background:var(--roj);color:#fff;border:none;flex-shrink:0" onclick="resetDatos()">🗑 Reiniciar todos los datos</button>
+        </div>
+
+        <div class="admin-only" style="border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.04);border-radius:12px;margin-top:.875rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:.875rem 1.125rem">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--roj);margin-bottom:4px">⚠ Zona de reinicio</div>
+              <div style="font-size:12px;color:var(--gt)">Borra todos los datos locales — máquinas, stock, historial y configuración. Solo para empezar de cero o limpiar datos de prueba.</div>
+            </div>
+            <button class="btn bsm" style="background:var(--roj);color:#fff;border:none;flex-shrink:0" onclick="resetDatos()">🗑 Reiniciar todos los datos</button>
+          </div>
         </div>
       </div>
 
@@ -1220,8 +1224,8 @@ function confirmarCompra(items){
   }
   
   renderMaquina();
-  // Actualizar resultado si está visible
-  if(CD && document.getElementById("pg-resultado").classList.contains("on")) renderResults(CD);
+  const _sEl=document.getElementById('stockSug');
+  if(_sEl&&CD&&document.getElementById('pg-resultado').classList.contains('on')){const _tF='$'+Math.round(totalCompra).toLocaleString('es-AR');const _iF='$'+Math.round(ivaCompra).toLocaleString('es-AR');const _dH=detalle.map(function(d){return '<div style="font-size:12px;color:var(--gt);padding:3px 0">✓ '+d.nombre+' — '+d.potes+' pote'+(d.potes>1?'s':'')+' · $'+Math.round(d.costoItem).toLocaleString('es-AR')+'</div>';}).join('');const _c=_sEl.querySelector('.card.cn');if(_c){_c.innerHTML='<div style="display:flex;align-items:flex-start;gap:14px"><div style="font-size:2rem">✅</div><div style="flex:1"><div style="font-weight:700;color:var(--ver);font-size:15px;margin-bottom:6px">¡Pedido confirmado!</div>'+_dH+'<div style="margin-top:10px;font-size:12px;color:var(--gt)">Total c/IVA: <strong style="color:var(--ora)">'+_tF+'</strong> · IVA crédito: <strong style="color:var(--ver)">'+_iF+'</strong></div></div></div>';_c.style.borderColor='rgba(34,197,94,.4)';_c.style.background='rgba(34,197,94,.04)';}}
   // Actualizar stock si está visible  
   if(document.getElementById("pg-stock").classList.contains("on")) renderStock();
 }
@@ -2119,9 +2123,8 @@ async function crearMaquina(){
   var stk={};P.forEach(function(p){stk[p.rk]=0;});
   var newMaq={name:nombre,code:codigo,tipo:tipo,ci:ci,stock:stk,meses:[],compras:[],invTotal:0,ivaCredTotal:0,fechaAlta:new Date().toLocaleDateString('es-AR'),inactivos:{}};
   if(ONLINE_MODE){
-    var res=await sbPost('maquinas',{codigo:codigo,nombre:nombre,tipo:tipo,usuario_id:usuarioId||null});
-    if(res&&res[0])newMaq.supaId=res[0].id;
-    else{msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error - codigo ya existe.';btn.disabled=false;btn.textContent='Crear';return;}
+    var res=await sbFetch('maquinas',{method:'POST',body:{codigo:codigo,nombre:nombre,tipo:tipo,usuario_id:usuarioId||null},prefer:'return=representation'});
+    if(res&&res[0]){newMaq.supaId=res[0].id;}else{var existe=await sbGet('maquinas','codigo=eq.'+codigo);if(existe&&existe.length){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error: el código '+codigo+' ya existe.';btn.disabled=false;btn.textContent='Crear maquina';return;}}
   }
   MAQ[codigo]=newMaq;savMAQ();renderSelectorMaquinas();
   msg.style.display='block';msg.style.color='var(--ver)';msg.textContent='Maquina '+nombre+' creada.';
