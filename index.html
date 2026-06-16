@@ -182,6 +182,7 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
       <div class="ni" onclick="go('historial')"><span class="nic">🕐</span><span>Historial</span></div>
       <div class="nsec">Red de máquinas</div>
       <div class="ni" onclick="go('alertas')"><span class="nic" id="alertaIcon">🗂️</span><span>Stock &amp; Alertas</span></div>
+      <div class="ni admin-only" onclick="go('pedidos')" id="niPedidos"><span class="nic">📋</span><span>Pedidos <span id="badgePedidos" style="display:none;background:var(--roj);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span></span></div>
       <div class="ni" onclick="go('market')"><span class="nic">🛒</span><span>VIN Market</span></div>
       <div class="nsec admin-only">Gestión VIN</div>
       <div class="ni admin-only" onclick="go('config')"><span class="nic">⚙️</span><span>Configuración</span></div>
@@ -493,6 +494,17 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
         </div>
       </div>
 
+      <!-- ══ PEDIDOS ══ -->
+      <div id="pg-pedidos" class="view admin-only">
+        <div class="ct" style="display:flex;justify-content:space-between;align-items:center">
+          <span>📋 Pedidos de franquiciados</span>
+          <button class="btn bs bsm" onclick="cargarPedidos()">↺ Actualizar</button>
+        </div>
+        <div id="pedidosList" style="margin-top:1rem">
+          <div style="color:var(--gt);text-align:center;padding:2rem">Cargando pedidos...</div>
+        </div>
+      </div>
+
       <!-- ══ GLOBAL ══ -->
       <div id="pg-global" class="view admin-only">
         <div class="card"><div class="ct">Resumen global — todas las máquinas</div><div id="globalCnt"></div></div>
@@ -505,7 +517,9 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 
-let ONLINE_MODE=false;let MAQ_ACTIVA=null;
+let ONLINE_MODE=false;
+let PEDIDO_ACTUAL={items:{},maquinaCode:null};
+setInterval(function(){if(CU&&CU.role==='admin'&&ONLINE_MODE)verificarPedidosPendientes();},60000); // pedido en curso del franquiciadolet MAQ_ACTIVA=null;
 
 async function sbFetch(path,opt){
   if(!opt)opt={};
@@ -738,6 +752,7 @@ async function login(){
     $('lerr').style.display='none';
     CU={username:u,name:user.nombre,role:user.role==='admin'?'admin':'franq',av:user.nombre[0].toUpperCase(),id:user.id};
     await loadMaquinasSupa();
+    verificarPedidosPendientes();
   } else {
     const us=USERS[u];
     if(!us||us.pass!==p){$('lerr').style.display='block';if(btn){btn.disabled=false;btn.textContent='Ingresar';}return;}
@@ -794,7 +809,7 @@ function enterApp(){
 }
 
 // ── NAVEGACIÓN ────────────────────────────────────────────────
-const PTIT={carga:'Cargar reporte',resultado:'Resultado del mes',stock:'Stock',maquina:'Mi máquina',historial:'Historial',market:'VIN Market',alertas:'Stock & Alertas',nuevaMaquina:'Nueva maquina',config:'Configuración',global:'Resumen global'};
+const PTIT={carga:'Cargar reporte',resultado:'Resultado del mes',stock:'Stock',maquina:'Mi máquina',historial:'Historial',market:'VIN Market',alertas:'Stock & Alertas',pedidos:'Pedidos',nuevaMaquina:'Nueva maquina',config:'Configuración',global:'Resumen global'};
 function applyRole(){
   const isAdmin=CU&&CU.role==='admin';
   document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'':' none');
@@ -840,7 +855,14 @@ const DEMOS={
     ind:{'Whey Protein Vainilla':8,'Whey Protein Chocolate':3,'Whey Protein Cookies Cream':7,'Creatina Micronizada':15,'Carbo Energy Fruit Punch':8,'Pre Entreno Fuit Punch':3,'Colagen Sport Naranja':4},
     comb:{'Whey Protein Vainilla + Creatina':5,'Whey Protein Chocolate + Creatina':3,'Whey Protein Cookies Cream + Creatina':4,'Carbo Energy Fruit Punch + Creatina':1}},
 };
-function demo(mes){const d=DEMOS[mes];$('mNm').value=d.name;$('mCd').value=d.code;$('mPr').value=d.period;$('mTp').value=d.tipo;renderResults(d);}
+function demo(mes){
+  const d=Object.assign({},DEMOS[mes]);
+  const activaCode=$('mCd').value||d.code;
+  const activaMaq=MAQ[activaCode];
+  if(activaMaq){d.code=activaCode;d.name=activaMaq.name||activaCode;d.tipo=activaMaq.tipo||d.tipo;}
+  $('mNm').value=d.name;$('mCd').value=d.code;$('mPr').value=d.period;$('mTp').value=d.tipo;
+  renderResults(d);
+}
 
 // ── ARCHIVO ───────────────────────────────────────────────────
 function handleFile(f){
@@ -899,7 +921,7 @@ function renderResults(d){
     const f=cnt*p.pv;fact+=f;
     const neto=p.pv/(1+IVA);
     const costoVIN=p.com*(1-p.d);
-    const costoPote=esVIN?costoVIN:p.com*0.90; // franq = comercial × 0.90 (−10% fijo)
+    const costoPote=esVIN?costoVIN:p.com*0.90; // franq = comercial × (1-desc%)
     const costoSbruto=costoPote/p.sv;             // costo/serv c/IVA
     const costoS=costoSbruto/(1+IVA);            // costo/serv neto s/IVA
     const util=(neto-costoS)*cnt;utilProd+=util;
@@ -1391,6 +1413,20 @@ function renderStock(){
   const stockPW = $('stockPreciosWarning');
   if(ciCard) ciCard.style.display = esFranq ? 'none' : '';
   if(stockPW) stockPW.style.display = esFranq ? 'block' : 'none';
+  // Panel de pedido para franquiciados
+  let pedidoPanel = $('pedidoPanel');
+  if(esFranq){
+    if(!pedidoPanel){
+      pedidoPanel = document.createElement('div');
+      pedidoPanel.id = 'pedidoPanel';
+      pedidoPanel.style.cssText = 'margin-top:1rem;border:1px solid var(--gb);border-radius:12px;overflow:hidden';
+      const stockView = $('pg-stock');
+      if(stockView) stockView.appendChild(pedidoPanel);
+    }
+    renderPedidoPanel(maq);
+  } else {
+    if(pedidoPanel) pedidoPanel.style.display = 'none';
+  }
 
   // Ocultar botones de perfil para franquiciados
   document.querySelectorAll('#stockBtns .btn').forEach(b => {
@@ -1508,8 +1544,7 @@ function updateCITotals(maq){
     const precioChico=p.com*0.90;
     totChico+=ci.potes*precioChico;
   });
-  const ahorro=totChico-totB;
-  const ahorroTxt=ahorro>100?` <span style="font-size:11px;color:var(--ver);margin-left:8px">✓ ahorrás ${peso(ahorro)} vs perfil chico</span>`:'';
+  const ahorroTxt='';
   $('ciFoot').innerHTML=`<tr style="border-top:1px solid var(--gb)">
     <td style="font-weight:600;padding-top:9px">Total inversión inicial${ahorroTxt}</td><td></td><td></td>
     <td style="text-align:right;font-weight:700;color:var(--ora);padding-top:9px">${peso(totB)}</td>
@@ -1558,8 +1593,7 @@ function recalcStock(maq){
 }
 
 async function syncCISupa(code){
-  if(!ONLINE_MODE)return;
-  const maq=MAQ[code];if(!maq||!maq.supaId)return;
+  if(!ONLINE_MODE)return;const maq=MAQ[code];if(!maq||!maq.supaId)return;
   const items=P.map(function(p){const ci=maq.ci[p.rk];return{maquina_id:maq.supaId,producto_rkey:p.rk,gramos_actuales:maq.stock[p.rk]||0,ci_potes:(ci&&ci.potes)||0,ci_precio:(ci&&ci.precio)||0};});
   await sbFetch('stock?on_conflict=maquina_id,producto_rkey',{method:'POST',body:items,prefer:'resolution=merge-duplicates,return=minimal'});
 }
@@ -2146,11 +2180,7 @@ async function crearMaquina(){
     try{
       var existe=await sbGet('maquinas','codigo=eq.'+codigo);
       if(existe&&existe.length>0){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='El código '+codigo+' ya existe. Usá otro.';btn.disabled=false;btn.textContent='Crear maquina';return;}
-      var insertRes=await fetch('https://vsbhiffdomrmgfiwlsvo.supabase.co/rest/v1/maquinas',{
-        method:'POST',
-        headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Content-Type':'application/json','Prefer':'return=representation'},
-        body:JSON.stringify({codigo:codigo,nombre:nombre,tipo:tipo,usuario_id:usuarioId||null})
-      });
+      var insertRes=await fetch('https://vsbhiffdomrmgfiwlsvo.supabase.co/rest/v1/maquinas',{method:'POST',headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({codigo:codigo,nombre:nombre,tipo:tipo,usuario_id:usuarioId||null})});
       if(!insertRes.ok){var et=await insertRes.text();console.error('Error:',et);msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error al crear ('+insertRes.status+'). Intentá de nuevo.';btn.disabled=false;btn.textContent='Crear maquina';return;}
       var insertData=await insertRes.json().catch(function(){return null;});
       if(insertData&&Array.isArray(insertData)&&insertData[0]){newMaq.supaId=insertData[0].id;}
@@ -2158,12 +2188,188 @@ async function crearMaquina(){
     }catch(e){console.error('Error:',e);msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error de conexión. Intentá de nuevo.';btn.disabled=false;btn.textContent='Crear maquina';return;}
   }
   MAQ[codigo]=newMaq;savMAQ();renderSelectorMaquinas();
-  msg.style.display='block';msg.style.color='var(--ver)';
-  msg.textContent='✓ Máquina '+nombre+' ('+codigo+') creada correctamente.';
-  $('nmCodigo').value='';$('nmNombre').value='';
-  btn.disabled=false;btn.textContent='Crear maquina';
+  msg.style.display='block';msg.style.color='var(--ver)';msg.textContent='✓ Máquina '+nombre+' ('+codigo+') creada correctamente.';
+  $('nmCodigo').value='';$('nmNombre').value='';btn.disabled=false;btn.textContent='Crear maquina';
 }
 
+
+// ══ SISTEMA DE PEDIDOS ══════════════════════════════════════
+
+function renderPedidoPanel(maq){
+  const panel = $('pedidoPanel');
+  if(!panel) return;
+  const code = maq.code || maq.codigo;
+  if(PEDIDO_ACTUAL.maquinaCode !== code){
+    PEDIDO_ACTUAL = {items:{}, maquinaCode:code};
+  }
+  const items = PEDIDO_ACTUAL.items;
+  const tieneItems = Object.keys(items).some(k=>items[k]>0);
+  let html = `<div style="padding:.875rem 1.125rem;background:var(--g2);border-bottom:1px solid var(--gb)">
+    <div style="font-weight:700;font-size:13px">🛒 Hacer un pedido a VIN</div>
+    <div style="font-size:12px;color:var(--gt);margin-top:2px">Seleccioná los productos que necesitás. VIN confirmará y actualizará tu stock.</div>
+  </div>
+  <div style="padding:.875rem 1.125rem">`;
+  
+  P.forEach(function(p){
+    const stockActual = maq.stock[p.rk]||0;
+    const potes = Math.max(0, Math.floor(stockActual/p.pG));
+    const qty = items[p.rk]||0;
+    const precio = p.com*0.90;
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--gb)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600">${p.i}</div>
+        <div style="font-size:11px;color:var(--gt)">Stock actual: ${potes} potes · Precio: $${Math.round(precio).toLocaleString('es-AR')}/pote</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button onclick="pedidoQty('${p.rk}',-1)" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--gb);background:var(--g2);color:var(--bla);cursor:pointer;font-size:16px;line-height:1">−</button>
+        <span id="qty_${p.rk}" style="min-width:24px;text-align:center;font-weight:700">${qty}</span>
+        <button onclick="pedidoQty('${p.rk}',1)" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--gb);background:var(--g2);color:var(--bla);cursor:pointer;font-size:16px;line-height:1">+</button>
+      </div>
+    </div>`;
+  });
+  
+  const total = Object.keys(items).reduce(function(sum,rk){
+    const p = P.find(function(x){return x.rk===rk;});
+    return sum + (p ? (items[rk]||0)*p.com*0.90 : 0);
+  }, 0);
+  
+  html += `</div>
+  <div style="padding:.875rem 1.125rem;display:flex;justify-content:space-between;align-items:center;background:var(--g2);border-top:1px solid var(--gb)">
+    <div style="font-size:13px;color:var(--gt)">Total estimado: <strong style="color:var(--bla)">$${Math.round(total).toLocaleString('es-AR')}</strong> c/IVA</div>
+    <button onclick="enviarPedido()" ${tieneItems?'':'disabled'} style="background:${tieneItems?'var(--ora)':'var(--g2)'};color:${tieneItems?'#fff':'var(--gt)'};border:none;border-radius:8px;padding:8px 18px;font-weight:700;cursor:${tieneItems?'pointer':'not-allowed'};font-size:13px">
+      📦 Enviar pedido a VIN
+    </button>
+  </div>`;
+  panel.innerHTML = html;
+  panel.style.display = 'block';
+}
+
+function pedidoQty(rk, delta){
+  if(!PEDIDO_ACTUAL.items[rk]) PEDIDO_ACTUAL.items[rk] = 0;
+  PEDIDO_ACTUAL.items[rk] = Math.max(0, (PEDIDO_ACTUAL.items[rk]||0) + delta);
+  const code = PEDIDO_ACTUAL.maquinaCode;
+  const maq = MAQ[code];
+  if(maq) renderPedidoPanel(maq);
+}
+
+async function enviarPedido(){
+  const items = PEDIDO_ACTUAL.items;
+  const code = PEDIDO_ACTUAL.maquinaCode;
+  const maq = MAQ[code];
+  if(!maq || !maq.supaId) return;
+  
+  const detalle = [];
+  let total = 0;
+  P.forEach(function(p){
+    const qty = items[p.rk]||0;
+    if(qty > 0){
+      const precio = p.com*0.90;
+      const subtotal = qty*precio;
+      total += subtotal;
+      detalle.push({rk:p.rk, nombre:p.i, potes:qty, precioUnit:Math.round(precio), subtotal:Math.round(subtotal)});
+    }
+  });
+  
+  if(!detalle.length) return;
+  
+  const btn = document.querySelector('#pedidoPanel button[onclick="enviarPedido()"]');
+  if(btn){btn.disabled=true;btn.textContent='Enviando...';}
+  
+  try{
+    if(ONLINE_MODE){
+      await sbPost('pedidos',{
+        maquina_id:maq.supaId,
+        estado:'pendiente',
+        detalle:detalle,
+        total:Math.round(total),
+        nota:'Pedido de '+maq.name+' — '+(CU&&CU.name||'Franquiciado')
+      });
+    }
+    // Mostrar confirmación
+    PEDIDO_ACTUAL = {items:{}, maquinaCode:null};
+    const panel = $('pedidoPanel');
+    if(panel){
+      panel.innerHTML = `<div style="padding:1.5rem;text-align:center">
+        <div style="font-size:2rem;margin-bottom:8px">✅</div>
+        <div style="font-weight:700;color:var(--ver);font-size:15px;margin-bottom:6px">¡Pedido enviado!</div>
+        <div style="font-size:13px;color:var(--gt)">VIN recibió tu pedido y lo confirmará a la brevedad. Te avisaremos cuando el stock esté actualizado.</div>
+        <button onclick="renderStock()" style="margin-top:12px;background:var(--g2);border:1px solid var(--gb);border-radius:8px;padding:6px 16px;color:var(--bla);cursor:pointer;font-size:12px">Hacer otro pedido</button>
+      </div>`;
+    }
+  }catch(e){
+    console.error('Error enviando pedido:',e);
+    if(btn){btn.disabled=false;btn.textContent='📦 Enviar pedido a VIN';}
+  }
+}
+
+async function cargarPedidos(){
+  const el = $('pedidosList');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--gt);text-align:center;padding:2rem">Cargando...</div>';
+  
+  if(!ONLINE_MODE){
+    el.innerHTML = '<div style="color:var(--gt);text-align:center;padding:2rem">Sin conexión a Supabase.</div>';
+    return;
+  }
+  
+  const pedidos = await sbGet('pedidos','order=created_at.desc&limit=50');
+  if(!pedidos||!pedidos.length){
+    el.innerHTML = '<div style="color:var(--gt);text-align:center;padding:2rem">No hay pedidos todavía.</div>';
+    return;
+  }
+  
+  // Obtener nombres de máquinas
+  const maqMap = {};
+  Object.values(MAQ).forEach(function(m){if(m.supaId)maqMap[m.supaId]=m.name;});
+  
+  el.innerHTML = pedidos.map(function(p){
+    const maqNombre = maqMap[p.maquina_id] || p.maquina_id;
+    const fecha = new Date(p.created_at).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const detalle = (p.detalle||[]).map(function(d){return d.potes+'× '+d.nombre;}).join(', ');
+    const estadoColor = p.estado==='pendiente'?'var(--ora)':p.estado==='aceptado'?'var(--ver)':'var(--roj)';
+    const estadoLabel = p.estado==='pendiente'?'⏳ Pendiente':p.estado==='aceptado'?'✓ Aceptado':'✗ Rechazado';
+    
+    return `<div style="border:1px solid var(--gb);border-radius:12px;padding:1rem;margin-bottom:.75rem;background:var(--g2)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:14px">🏭 ${maqNombre}</div>
+          <div style="font-size:12px;color:var(--gt);margin-top:2px">${fecha} · ${detalle}</div>
+          ${p.nota?`<div style="font-size:12px;color:var(--gt);margin-top:2px">${p.nota}</div>`:''}
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:13px;font-weight:700;color:var(--ora)">$${Math.round(p.total||0).toLocaleString('es-AR')}</div>
+          <div style="font-size:11px;color:${estadoColor};font-weight:600;margin-top:2px">${estadoLabel}</div>
+        </div>
+      </div>
+      ${p.estado==='pendiente'?`<div style="display:flex;gap:8px;margin-top:10px">
+        <button onclick="accionPedido('${p.id}','aceptado')" style="flex:1;background:var(--ver);color:#fff;border:none;border-radius:8px;padding:7px;cursor:pointer;font-weight:700;font-size:12px">✓ Aceptar pedido</button>
+        <button onclick="accionPedido('${p.id}','rechazado')" style="flex:1;background:var(--roj);color:#fff;border:none;border-radius:8px;padding:7px;cursor:pointer;font-weight:700;font-size:12px">✗ Rechazar</button>
+      </div>`:''}
+    </div>`;
+  }).join('');
+  
+  // Badge en sidebar
+  const pendientes = pedidos.filter(function(p){return p.estado==='pendiente';}).length;
+  actualizarBadgePedidos(pendientes);
+}
+
+async function accionPedido(id, estado){
+  await sbFetch('pedidos?id=eq.'+id, {method:'PATCH', body:{estado:estado, updated_at:new Date().toISOString()}, prefer:'return=minimal'});
+  cargarPedidos();
+}
+
+async function verificarPedidosPendientes(){
+  if(!ONLINE_MODE||!CU||CU.role!=='admin') return;
+  const r = await sbGet('pedidos','estado=eq.pendiente&select=id');
+  actualizarBadgePedidos(r?r.length:0);
+}
+
+function actualizarBadgePedidos(n){
+  const badge = $('badgePedidos');
+  if(!badge) return;
+  if(n>0){badge.textContent=n;badge.style.display='inline';}
+  else{badge.style.display='none';}
+}
 </script>
 
 <!-- Modal compra manual -->
