@@ -222,6 +222,7 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
             <button class="btn bs" onclick="demo('mayo')">👁 Demo Mayo</button>
             <button class="btn bs" onclick="demo('junio')">👁 Demo Junio</button>
             <button class="btn bs" onclick="demo('julio')">👁 Demo Julio</button>
+            <button class="btn bs" onclick="demo('agosto')">👁 Demo Agosto</button>
           </div>
         </div>
         <div class="card cn" style="padding:.875rem 1.125rem">
@@ -564,7 +565,10 @@ async function loadMaquinasSupa(){
       }
       MAQ[m.codigo].supaId=m.id;
       const sd=await sbGet('stock','maquina_id=eq.'+m.id);
-      if(sd)sd.forEach(function(s){MAQ[m.codigo].stock[s.producto_rkey]=s.gramos_actuales;});
+      if(sd)sd.forEach(function(s){
+        MAQ[m.codigo].stock[s.producto_rkey]=parseFloat(s.gramos_actuales)||0;
+        if(s.ci_potes>0){MAQ[m.codigo].ci[s.producto_rkey]={potes:parseFloat(s.ci_potes)||0,precio:parseFloat(s.ci_precio)||0};}
+      });
       const cd=await sbGet('compras','maquina_id=eq.'+m.id+'&order=created_at.desc');
       if(cd)MAQ[m.codigo].compras=cd;
       const md=await sbGet('meses','maquina_id=eq.'+m.id+'&order=saved_at.asc');
@@ -832,8 +836,23 @@ const DEMOS={
   julio:{name:'SC-Ballester',code:'E00225',period:'Julio 2026',tipo:'VIN',totalTx:350,
     ind:{'Whey Protein Vainilla':64,'Whey Protein Chocolate':12,'Whey Protein Cookies Cream':58,'Creatina Micronizada':22,'Carbo Energy Fruit Punch':58,'Pre Entreno Fuit Punch':32,'Colagen Sport Naranja':20},
     comb:{'Whey Protein Vainilla + Creatina':36,'Whey Protein Chocolate + Creatina':24,'Whey Protein Cookies Cream + Creatina':22,'Carbo Energy Fruit Punch + Creatina':2}},
+  agosto:{name:'SC-Ballester',code:'E00225',period:'Agosto 2026',tipo:'VIN',totalTx:87,
+    ind:{'Whey Protein Vainilla':8,'Whey Protein Chocolate':3,'Whey Protein Cookies Cream':7,'Creatina Micronizada':15,'Carbo Energy Fruit Punch':8,'Pre Entreno Fuit Punch':3,'Colagen Sport Naranja':4},
+    comb:{'Whey Protein Vainilla + Creatina':5,'Whey Protein Chocolate + Creatina':3,'Whey Protein Cookies Cream + Creatina':4,'Carbo Energy Fruit Punch + Creatina':1}},
 };
-function demo(mes){const d=DEMOS[mes];$('mNm').value=d.name;$('mCd').value=d.code;$('mPr').value=d.period;$('mTp').value=d.tipo;renderResults(d);}
+function demo(mes){
+  const d=Object.assign({},DEMOS[mes]);
+  // Usar la máquina activa si hay una seleccionada
+  const activaCode=$('mCd').value||d.code;
+  const activaMaq=MAQ[activaCode];
+  if(activaMaq&&activaCode!==d.code){
+    d.code=activaCode;
+    d.name=activaMaq.name||activaCode;
+    d.tipo=activaMaq.tipo||d.tipo;
+  }
+  $('mNm').value=d.name;$('mCd').value=d.code;$('mPr').value=d.period;$('mTp').value=d.tipo;
+  renderResults(d);
+}
 
 // ── ARCHIVO ───────────────────────────────────────────────────
 function handleFile(f){
@@ -1550,6 +1569,12 @@ function recalcStock(maq){
   });
 }
 
+async function syncCISupa(code){
+  if(!ONLINE_MODE)return;
+  const maq=MAQ[code];if(!maq||!maq.supaId)return;
+  const items=P.map(function(p){const ci=maq.ci[p.rk];return{maquina_id:maq.supaId,producto_rkey:p.rk,gramos_actuales:maq.stock[p.rk]||0,ci_potes:(ci&&ci.potes)||0,ci_precio:(ci&&ci.precio)||0};});
+  await sbFetch('stock?on_conflict=maquina_id,producto_rkey',{method:'POST',body:items,prefer:'resolution=merge-duplicates,return=minimal'});
+}
 function saveStock(){
   const maq=getMaq($('mCd').value||'E00225');
   // Leer CI del formulario
@@ -2124,65 +2149,26 @@ async function crearMaquina(){
   var tipo=$('nmTipo').value;
   var usuarioId=$('nmUsuario').value;
   var msg=$('nmMsg');
-  if(!codigo||!nombre){
-    msg.style.display='block';msg.style.color='var(--roj)';
-    msg.textContent='Completá código y nombre.';return;
-  }
-  var btn=event.target;btn.disabled=true;btn.textContent='Creando...';
-  msg.style.display='none';
-
-  // Preparar objeto local
+  if(!codigo||!nombre){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Completá código y nombre.';return;}
+  var btn=event.target;btn.disabled=true;btn.textContent='Creando...';msg.style.display='none';
   var ci={};P.forEach(function(p){ci[p.rk]={potes:0,precio:p.com*(1-p.d)};});
   var stk={};P.forEach(function(p){stk[p.rk]=0;});
-  var newMaq={name:nombre,code:codigo,tipo:tipo,ci:ci,stock:stk,
-    meses:[],compras:[],invTotal:0,ivaCredTotal:0,
-    fechaAlta:new Date().toLocaleDateString('es-AR'),inactivos:{}};
-
+  var newMaq={name:nombre,code:codigo,tipo:tipo,ci:ci,stock:stk,meses:[],compras:[],invTotal:0,ivaCredTotal:0,fechaAlta:new Date().toLocaleDateString('es-AR'),inactivos:{}};
   if(ONLINE_MODE){
     try{
-      // Paso 1: verificar que el código no exista
       var existe=await sbGet('maquinas','codigo=eq.'+codigo);
-      if(existe&&existe.length>0){
-        msg.style.display='block';msg.style.color='var(--roj)';
-        msg.textContent='El código '+codigo+' ya existe. Usá otro.';
-        btn.disabled=false;btn.textContent='Crear maquina';return;
-      }
-      // Paso 2: insertar en Supabase
+      if(existe&&existe.length>0){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='El código '+codigo+' ya existe. Usá otro.';btn.disabled=false;btn.textContent='Crear maquina';return;}
       var insertRes=await fetch('https://vsbhiffdomrmgfiwlsvo.supabase.co/rest/v1/maquinas',{
         method:'POST',
-        headers:{
-          'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE',
-          'Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE',
-          'Content-Type':'application/json',
-          'Prefer':'return=representation'
-        },
+        headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Content-Type':'application/json','Prefer':'return=representation'},
         body:JSON.stringify({codigo:codigo,nombre:nombre,tipo:tipo,usuario_id:usuarioId||null})
       });
-      if(!insertRes.ok){
-        var errTxt=await insertRes.text();
-        console.error('Error creando maquina:',errTxt);
-        msg.style.display='block';msg.style.color='var(--roj)';
-        msg.textContent='Error al crear en Supabase. Código: '+insertRes.status;
-        btn.disabled=false;btn.textContent='Crear maquina';return;
-      }
-      // Paso 3: obtener el id del registro creado
+      if(!insertRes.ok){var e=await insertRes.text();console.error('Error:',e);msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error al crear ('+insertRes.status+'). Intentá de nuevo.';btn.disabled=false;btn.textContent='Crear maquina';return;}
       var insertData=await insertRes.json().catch(function(){return null;});
-      if(insertData&&Array.isArray(insertData)&&insertData[0]){
-        newMaq.supaId=insertData[0].id;
-      } else {
-        // Fallback: buscar por código
-        var buscar=await sbGet('maquinas','codigo=eq.'+codigo);
-        if(buscar&&buscar[0])newMaq.supaId=buscar[0].id;
-      }
-    }catch(e){
-      console.error('Error en crearMaquina:',e);
-      msg.style.display='block';msg.style.color='var(--roj)';
-      msg.textContent='Error de conexión. Intentá de nuevo.';
-      btn.disabled=false;btn.textContent='Crear maquina';return;
-    }
+      if(insertData&&Array.isArray(insertData)&&insertData[0]){newMaq.supaId=insertData[0].id;}
+      else{var buscar=await sbGet('maquinas','codigo=eq.'+codigo);if(buscar&&buscar[0])newMaq.supaId=buscar[0].id;}
+    }catch(e){console.error('Error:',e);msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error de conexión. Intentá de nuevo.';btn.disabled=false;btn.textContent='Crear maquina';return;}
   }
-
-  // Guardar localmente y actualizar UI
   MAQ[codigo]=newMaq;savMAQ();renderSelectorMaquinas();
   msg.style.display='block';msg.style.color='var(--ver)';
   msg.textContent='✓ Máquina '+nombre+' ('+codigo+') creada correctamente.';
