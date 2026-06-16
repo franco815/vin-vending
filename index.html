@@ -479,7 +479,6 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
             <div style="min-width:80px"><label>IVA %</label><input type="number" id="pIv" value="21" step=".1" style="width:80px" onchange="savePar()"></div>
             <div style="min-width:150px"><label>Util. franq. base %</label><input type="number" id="pFr" value="10" step=".5" style="width:80px" onchange="savePar()"></div>
             <div style="min-width:140px"><label>Alerta stock %</label><input type="number" id="pAl" value="50" step="5" style="width:80px" onchange="savePar()"></div>
-            <div style="min-width:200px"><label>Piso facturación franq. $</label><input type="number" id="pPiso" value="1000000" step="50000" style="width:130px" onchange="savePar()"></div>
           </div>
         </div>
       </div>
@@ -511,9 +510,14 @@ async function sbFetch(path,opt){
   if(!opt)opt={};
   const headers={'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Content-Type':'application/json'};
   if(opt.prefer)headers['Prefer']=opt.prefer;
-  const res=await fetch('https://vsbhiffdomrmgfiwlsvo.supabase.co/rest/v1/'+path,{headers:headers,method:opt.method||'GET',body:opt.body?JSON.stringify(opt.body):undefined});
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),5000);
+  try{
+  const res=await fetch('https://vsbhiffdomrmgfiwlsvo.supabase.co/rest/v1/'+path,{headers:headers,method:opt.method||'GET',body:opt.body?JSON.stringify(opt.body):undefined,signal:controller.signal});
+  clearTimeout(timeout);
   if(!res.ok){const t=await res.text();console.error('Supa:',t);return null;}
   const t=await res.text();return t?JSON.parse(t):null;
+  }catch(e){clearTimeout(timeout);console.error('sbFetch error:',e);return null;}
 }
 const sbGet=(t,q)=>sbFetch(t+(q?'?'+q:''));
 const sbPost=(t,b)=>sbFetch(t,{method:'POST',body:b});
@@ -535,7 +539,12 @@ async function checkOnline(){
   }catch(e){ONLINE_MODE=false;}
   return ONLINE_MODE;
 }
-async function loginSupa(u,p){const r=await sbGet('usuarios','username=eq.'+u+'&password_hash=eq.'+p);return r&&r.length?r[0]:null;}
+async function loginSupa(u,p){
+  // Intentar con password_hash primero, luego con password
+  let r=await sbGet('usuarios','username=eq.'+u+'&password_hash=eq.'+p);
+  if(!r||!r.length)r=await sbGet('usuarios','username=eq.'+u+'&password=eq.'+p);
+  return r&&r.length?r[0]:null;
+}
 async function syncStockSupa(code){
   const maq=MAQ[code];if(!maq||!maq.supaId)return;
   const items=P.map(function(p){return{maquina_id:maq.supaId,producto_rkey:p.rk,gramos_actuales:maq.stock[p.rk]||0};});
@@ -607,7 +616,7 @@ function loadLS(){
   try{
     const p=localStorage.getItem('v4_p');if(p)P=JSON.parse(p);
     const c=localStorage.getItem('v4_c');if(c)CB=JSON.parse(c);
-    const pr=localStorage.getItem('v4_par');if(pr){const _p=JSON.parse(pr);PAR=Object.assign({PISO:1000000},_p);}
+    const pr=localStorage.getItem('v4_par');if(pr)PAR=JSON.parse(pr);
     const m=localStorage.getItem('v4_maq');if(m)MAQ=JSON.parse(m);
   }catch(e){}
 }
@@ -785,7 +794,7 @@ function enterApp(){
 const PTIT={carga:'Cargar reporte',resultado:'Resultado del mes',stock:'Stock',maquina:'Mi máquina',historial:'Historial',market:'VIN Market',alertas:'Stock & Alertas',nuevaMaquina:'Nueva maquina',config:'Configuración',global:'Resumen global'};
 function applyRole(){
   const isAdmin=CU&&CU.role==='admin';
-  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'''none');
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'':' none');
 }
 function go(n){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
@@ -810,7 +819,7 @@ function go(n){
     $('noRes').style.display=CD?'none':'block';
     $('resContent').style.display=CD?'block':'none';
   }
-  applyRole();
+  if(CU)applyRole();
 }
 
 // ── DEMOS ─────────────────────────────────────────────────────
@@ -970,7 +979,7 @@ function renderResults(d){
     {k:'− Gastos operativos neto',           v:'− '+peso(gOpN), c:'var(--roj)'},
     {k:'Utilidad bruta real',                 v:peso(utilBruta),c:'var(--ver)',sub:true},
     {k:'− IVA a pagar',                      v:'− '+peso(ivaPag),c:'var(--roj)'},
-    {k:'− '+$('gGn').value+' ('+$('gGp').value+'% s/'+((!esVIN&&fact<PAR.PISO)?'piso $'+Math.round(PAR.PISO/1000)+'k':'fact. real')+')',v:'− '+peso(comG),c:'var(--roj)'},
+    {k:'− '+$('gGn').value+' ('+$('gGp').value+'%)',v:'− '+peso(comG),c:'var(--roj)'},
     {k:'− '+$('gIn').value+' ('+$('gIp').value+'%)',v:'− '+peso(prevI),c:'var(--roj)'},
     {k:'UTILIDAD NETA DEL MES',              v:peso(utilNeta), c:utilNeta>=0?'var(--ora)':'var(--roj)',tot:true},
   ].map(r=>`<div class="fr${r.sub?' sub':r.tot?' tot':''}">
@@ -1210,16 +1219,6 @@ function confirmarCompra(items){
   recalcStock(maq);
   recalcInv(maq);
   savMAQ();
-  // Sync a Supabase
-  if(ONLINE_MODE&&maq.supaId){
-    // Subir stock actualizado
-    syncStockSupa(CD.code).catch(function(e){console.error('sync stock:',e);});
-    // Subir compra
-    const compraRec=maq.compras[0];
-    if(compraRec){
-      sbPost('compras',{maquina_id:maq.supaId,fecha:compraRec.fecha,period:compraRec.period||'',detalle:compraRec.detalle,total_compra:compraRec.totalCompra,iva_compra:compraRec.ivaCompra}).catch(function(e){console.error('sync compra:',e);});
-    }
-  }
   
   // Feedback visual
   if(btn){
@@ -1233,8 +1232,8 @@ function confirmarCompra(items){
   }
   
   renderMaquina();
-  const _sEl=document.getElementById('stockSug');
-  if(_sEl&&CD&&document.getElementById('pg-resultado').classList.contains('on')){const _tF='$'+Math.round(totalCompra).toLocaleString('es-AR');const _iF='$'+Math.round(ivaCompra).toLocaleString('es-AR');const _dH=detalle.map(function(d){return '<div style="font-size:12px;color:var(--gt);padding:3px 0">✓ '+d.nombre+' — '+d.potes+' pote'+(d.potes>1?'s':'')+' · $'+Math.round(d.costoItem).toLocaleString('es-AR')+'</div>';}).join('');const _c=_sEl.querySelector('.card.cn');if(_c){_c.innerHTML='<div style="display:flex;align-items:flex-start;gap:14px"><div style="font-size:2rem">✅</div><div style="flex:1"><div style="font-weight:700;color:var(--ver);font-size:15px;margin-bottom:6px">¡Pedido confirmado!</div>'+_dH+'<div style="margin-top:10px;font-size:12px;color:var(--gt)">Total c/IVA: <strong style="color:var(--ora)">'+_tF+'</strong> · IVA crédito: <strong style="color:var(--ver)">'+_iF+'</strong></div></div></div>';_c.style.borderColor='rgba(34,197,94,.4)';_c.style.background='rgba(34,197,94,.04)';}}
+  // Actualizar resultado si está visible
+  if(CD && document.getElementById("pg-resultado").classList.contains("on")) renderResults(CD);
   // Actualizar stock si está visible  
   if(document.getElementById("pg-stock").classList.contains("on")) renderStock();
 }
@@ -1292,12 +1291,6 @@ function saveMonth(){
   // Recalcular stock y guardar
   recalcStock(maq);
   savMAQ();
-  // Sync mes a Supabase
-  if(ONLINE_MODE&&maq.supaId){
-    const mesRec=maq.meses[maq.meses.length-1];
-    sbPost('meses',{maquina_id:maq.supaId,periodo:mesRec.period||'',total_facturado:mesRec.totalFact||0,utilidad_neta:mesRec.utilNeta||0,consumo_gs:mesRec.consGs||{},datos_completos:mesRec,saved_at:new Date().toISOString()}).catch(function(e){console.error('sync mes:',e);});
-    syncStockSupa(maq.code).catch(function(e){console.error('sync stock mes:',e);});
-  }
   
   // Feedback visual claro
   btn.disabled = false;
@@ -1558,26 +1551,6 @@ function recalcStock(maq){
   });
 }
 
-
-async function syncCISupa(code){
-  if(!ONLINE_MODE)return;
-  const maq=MAQ[code];if(!maq||!maq.supaId)return;
-  // Subir CI como stock inicial: gramos = potes × pG
-  const items=P.map(function(p){
-    const ci=maq.ci[p.rk];
-    return{
-      maquina_id:maq.supaId,
-      producto_rkey:p.rk,
-      gramos_actuales:maq.stock[p.rk]||0,
-      ci_potes:(ci&&ci.potes)||0,
-      ci_precio:(ci&&ci.precio)||0
-    };
-  });
-  await sbFetch('stock?on_conflict=maquina_id,producto_rkey',{
-    method:'POST',body:items,
-    prefer:'resolution=merge-duplicates,return=minimal'
-  });
-}
 function saveStock(){
   const maq=getMaq($('mCd').value||'E00225');
   // Leer CI del formulario
@@ -1587,9 +1560,7 @@ function saveStock(){
   });
   // Recalcular stock dinámicamente
   recalcStock(maq);
-  recalcStock(maq);recalcInv(maq);savMAQ();
-  syncCISupa($('mCd').value||'E00225').catch(function(e){console.error('sync CI:',e);});
-  renderStock();
+  recalcStock(maq);recalcInv(maq);savMAQ();renderStock();
   const btn=event.target;btn.textContent='✓ Stock guardado';btn.style.background='var(--ver)';setTimeout(()=>{btn.textContent='💾 Guardar stock';btn.style.background='';},1500);
 }
 
@@ -1608,9 +1579,7 @@ function aplicarSugerida(perfil){
     maq.ci[p.rk]={potes:pot,precio};
   });
   if(!maq.meses.length){P.forEach(p=>{maq.stock[p.rk]=(maq.ci[p.rk].potes||0)*p.pG;});}
-  recalcInv(maq);savMAQ();
-  syncCISupa($('mCd').value||'E00225').catch(function(e){console.error('sync CI perfil:',e);});
-  renderStock();
+  recalcInv(maq);savMAQ();renderStock();
 }
 
 // ── MI MÁQUINA ────────────────────────────────────────────────
@@ -1764,7 +1733,7 @@ function renderCfg(){
     <td><input type="text" value="${c.k2}" onchange="CB[${i}].k2=this.value" style="font-family:monospace;width:68px"></td>
     <td><button class="btn bg bsm" style="color:var(--roj);border-color:transparent" onclick="CB.splice(${i},1);renderCfg()">✕</button></td>
   </tr>`).join('');
-  $('pMp').value=PAR.MP;$('pIv').value=PAR.IVA;$('pFr').value=PAR.FR;$('pAl').value=PAR.AL;if($('pPiso'))$('pPiso').value=PAR.PISO||1000000;
+  $('pMp').value=PAR.MP;$('pIv').value=PAR.IVA;$('pFr').value=PAR.FR;$('pAl').value=PAR.AL;
 }
 function saveCfg(){try{localStorage.setItem('v4_p',JSON.stringify(P));localStorage.setItem('v4_c',JSON.stringify(CB));savPar();renderCfg();const btn=event.target;btn.textContent='✓';btn.style.background='var(--ver)';setTimeout(()=>{btn.textContent='✓ Guardar';btn.style.background='';},1400);}catch(e){}}
 
@@ -2162,8 +2131,9 @@ async function crearMaquina(){
   var stk={};P.forEach(function(p){stk[p.rk]=0;});
   var newMaq={name:nombre,code:codigo,tipo:tipo,ci:ci,stock:stk,meses:[],compras:[],invTotal:0,ivaCredTotal:0,fechaAlta:new Date().toLocaleDateString('es-AR'),inactivos:{}};
   if(ONLINE_MODE){
-    var res=await sbFetch('maquinas',{method:'POST',body:{codigo:codigo,nombre:nombre,tipo:tipo,usuario_id:usuarioId||null},prefer:'return=representation'});
-    if(res&&res[0]){newMaq.supaId=res[0].id;}else{var existe=await sbGet('maquinas','codigo=eq.'+codigo);if(existe&&existe.length){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error: el código '+codigo+' ya existe.';btn.disabled=false;btn.textContent='Crear maquina';return;}}
+    var res=await sbPost('maquinas',{codigo:codigo,nombre:nombre,tipo:tipo,usuario_id:usuarioId||null});
+    if(res&&res[0])newMaq.supaId=res[0].id;
+    else{msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error - codigo ya existe.';btn.disabled=false;btn.textContent='Crear';return;}
   }
   MAQ[codigo]=newMaq;savMAQ();renderSelectorMaquinas();
   msg.style.display='block';msg.style.color='var(--ver)';msg.textContent='Maquina '+nombre+' creada.';
