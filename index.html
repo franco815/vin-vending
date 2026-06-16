@@ -510,14 +510,14 @@ async function sbFetch(path,opt){
   if(!opt)opt={};
   const headers={'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Content-Type':'application/json'};
   if(opt.prefer)headers['Prefer']=opt.prefer;
-  const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort(),5000);
+  const _ctrl=new AbortController();
+  const _tmr=setTimeout(()=>_ctrl.abort(),8000);
   try{
-  const res=await fetch('https://vsbhiffdomrmgfiwlsvo.supabase.co/rest/v1/'+path,{headers:headers,method:opt.method||'GET',body:opt.body?JSON.stringify(opt.body):undefined,signal:controller.signal});
-  clearTimeout(timeout);
-  if(!res.ok){const t=await res.text();console.error('Supa:',t);return null;}
-  const t=await res.text();return t?JSON.parse(t):null;
-  }catch(e){clearTimeout(timeout);console.error('sbFetch error:',e);return null;}
+    const res=await fetch('https://vsbhiffdomrmgfiwlsvo.supabase.co/rest/v1/'+path,{headers:headers,method:opt.method||'GET',body:opt.body?JSON.stringify(opt.body):undefined,signal:_ctrl.signal});
+    clearTimeout(_tmr);
+    if(!res.ok){const t=await res.text();console.error('Supa:',t);return null;}
+    const t=await res.text();return t?JSON.parse(t):null;
+  }catch(e){clearTimeout(_tmr);if(e.name!=='AbortError')console.error('sbFetch:',e);return null;}
 }
 const sbGet=(t,q)=>sbFetch(t+(q?'?'+q:''));
 const sbPost=(t,b)=>sbFetch(t,{method:'POST',body:b});
@@ -540,7 +540,6 @@ async function checkOnline(){
   return ONLINE_MODE;
 }
 async function loginSupa(u,p){
-  // Intentar con password_hash primero, luego con password
   let r=await sbGet('usuarios','username=eq.'+u+'&password_hash=eq.'+p);
   if(!r||!r.length)r=await sbGet('usuarios','username=eq.'+u+'&password=eq.'+p);
   return r&&r.length?r[0]:null;
@@ -2125,18 +2124,68 @@ async function crearMaquina(){
   var tipo=$('nmTipo').value;
   var usuarioId=$('nmUsuario').value;
   var msg=$('nmMsg');
-  if(!codigo||!nombre){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Completa codigo y nombre.';return;}
+  if(!codigo||!nombre){
+    msg.style.display='block';msg.style.color='var(--roj)';
+    msg.textContent='Completá código y nombre.';return;
+  }
   var btn=event.target;btn.disabled=true;btn.textContent='Creando...';
+  msg.style.display='none';
+
+  // Preparar objeto local
   var ci={};P.forEach(function(p){ci[p.rk]={potes:0,precio:p.com*(1-p.d)};});
   var stk={};P.forEach(function(p){stk[p.rk]=0;});
-  var newMaq={name:nombre,code:codigo,tipo:tipo,ci:ci,stock:stk,meses:[],compras:[],invTotal:0,ivaCredTotal:0,fechaAlta:new Date().toLocaleDateString('es-AR'),inactivos:{}};
+  var newMaq={name:nombre,code:codigo,tipo:tipo,ci:ci,stock:stk,
+    meses:[],compras:[],invTotal:0,ivaCredTotal:0,
+    fechaAlta:new Date().toLocaleDateString('es-AR'),inactivos:{}};
+
   if(ONLINE_MODE){
-    var res=await sbPost('maquinas',{codigo:codigo,nombre:nombre,tipo:tipo,usuario_id:usuarioId||null});
-    if(res&&res[0])newMaq.supaId=res[0].id;
-    else{msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error - codigo ya existe.';btn.disabled=false;btn.textContent='Crear';return;}
+    try{
+      // Paso 1: verificar que el código no exista
+      var existe=await sbGet('maquinas','codigo=eq.'+codigo);
+      if(existe&&existe.length>0){
+        msg.style.display='block';msg.style.color='var(--roj)';
+        msg.textContent='El código '+codigo+' ya existe. Usá otro.';
+        btn.disabled=false;btn.textContent='Crear maquina';return;
+      }
+      // Paso 2: insertar en Supabase
+      var insertRes=await fetch('https://vsbhiffdomrmgfiwlsvo.supabase.co/rest/v1/maquinas',{
+        method:'POST',
+        headers:{
+          'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE',
+          'Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE',
+          'Content-Type':'application/json',
+          'Prefer':'return=representation'
+        },
+        body:JSON.stringify({codigo:codigo,nombre:nombre,tipo:tipo,usuario_id:usuarioId||null})
+      });
+      if(!insertRes.ok){
+        var errTxt=await insertRes.text();
+        console.error('Error creando maquina:',errTxt);
+        msg.style.display='block';msg.style.color='var(--roj)';
+        msg.textContent='Error al crear en Supabase. Código: '+insertRes.status;
+        btn.disabled=false;btn.textContent='Crear maquina';return;
+      }
+      // Paso 3: obtener el id del registro creado
+      var insertData=await insertRes.json().catch(function(){return null;});
+      if(insertData&&Array.isArray(insertData)&&insertData[0]){
+        newMaq.supaId=insertData[0].id;
+      } else {
+        // Fallback: buscar por código
+        var buscar=await sbGet('maquinas','codigo=eq.'+codigo);
+        if(buscar&&buscar[0])newMaq.supaId=buscar[0].id;
+      }
+    }catch(e){
+      console.error('Error en crearMaquina:',e);
+      msg.style.display='block';msg.style.color='var(--roj)';
+      msg.textContent='Error de conexión. Intentá de nuevo.';
+      btn.disabled=false;btn.textContent='Crear maquina';return;
+    }
   }
+
+  // Guardar localmente y actualizar UI
   MAQ[codigo]=newMaq;savMAQ();renderSelectorMaquinas();
-  msg.style.display='block';msg.style.color='var(--ver)';msg.textContent='Maquina '+nombre+' creada.';
+  msg.style.display='block';msg.style.color='var(--ver)';
+  msg.textContent='✓ Máquina '+nombre+' ('+codigo+') creada correctamente.';
   $('nmCodigo').value='';$('nmNombre').value='';
   btn.disabled=false;btn.textContent='Crear maquina';
 }
