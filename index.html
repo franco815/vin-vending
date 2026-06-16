@@ -483,19 +483,13 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
           </div>
         </div>
       </div>
+
+      <!-- ══ DANGER ZONE ══ -->
+      <div class="card admin-only" style="border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04);margin-top:0">
+        <div class="ct" style="color:var(--roj)">⚠ Zona de reinicio</div>
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
           <div style="font-size:13px;color:var(--gt)">Borra todos los datos guardados — máquinas, stock, historial y configuración. Usalo solo para empezar de cero en una máquina nueva o para limpiar datos de prueba.</div>
           <button class="btn bsm" style="background:var(--roj);color:#fff;border:none;flex-shrink:0" onclick="resetDatos()">🗑 Reiniciar todos los datos</button>
-        </div>
-
-        <div class="admin-only" style="border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.04);border-radius:12px;margin-top:.875rem">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:.875rem 1.125rem">
-            <div>
-              <div style="font-size:13px;font-weight:700;color:var(--roj);margin-bottom:4px">⚠ Zona de reinicio</div>
-              <div style="font-size:12px;color:var(--gt)">Borra todos los datos locales — máquinas, stock, historial y configuración. Solo para empezar de cero o limpiar datos de prueba.</div>
-            </div>
-            <button class="btn bsm" style="background:var(--roj);color:#fff;border:none;flex-shrink:0" onclick="resetDatos()">🗑 Reiniciar todos los datos</button>
-          </div>
         </div>
       </div>
 
@@ -769,7 +763,7 @@ function logout(){CU=null;CD=null;$('loginWrap').style.display='flex';$('app').s
 function enterApp(){
   $('loginWrap').style.display='none';$('app').style.display='block';
   $('sNm').textContent=CU.name;$('sRl').textContent=CU.role==='admin'?'Administrador':'Franquiciado';$('sAv').textContent=CU.av;$('tusr').textContent=CU.name;
-  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=CU.role==='admin'?'':'none');
+  applyRole();
   if(CU.role==='franq'){
     $('tipoFld').style.display='none';
     $('mTp').value='Franquiciado';
@@ -789,6 +783,10 @@ function enterApp(){
 
 // ── NAVEGACIÓN ────────────────────────────────────────────────
 const PTIT={carga:'Cargar reporte',resultado:'Resultado del mes',stock:'Stock',maquina:'Mi máquina',historial:'Historial',market:'VIN Market',alertas:'Stock & Alertas',nuevaMaquina:'Nueva maquina',config:'Configuración',global:'Resumen global'};
+function applyRole(){
+  const isAdmin=CU&&CU.role==='admin';
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'''none');
+}
 function go(n){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(x=>x.classList.remove('on'));
@@ -812,6 +810,7 @@ function go(n){
     $('noRes').style.display=CD?'none':'block';
     $('resContent').style.display=CD?'block':'none';
   }
+  applyRole();
 }
 
 // ── DEMOS ─────────────────────────────────────────────────────
@@ -1211,6 +1210,16 @@ function confirmarCompra(items){
   recalcStock(maq);
   recalcInv(maq);
   savMAQ();
+  // Sync a Supabase
+  if(ONLINE_MODE&&maq.supaId){
+    // Subir stock actualizado
+    syncStockSupa(CD.code).catch(function(e){console.error('sync stock:',e);});
+    // Subir compra
+    const compraRec=maq.compras[0];
+    if(compraRec){
+      sbPost('compras',{maquina_id:maq.supaId,fecha:compraRec.fecha,period:compraRec.period||'',detalle:compraRec.detalle,total_compra:compraRec.totalCompra,iva_compra:compraRec.ivaCompra}).catch(function(e){console.error('sync compra:',e);});
+    }
+  }
   
   // Feedback visual
   if(btn){
@@ -1283,6 +1292,12 @@ function saveMonth(){
   // Recalcular stock y guardar
   recalcStock(maq);
   savMAQ();
+  // Sync mes a Supabase
+  if(ONLINE_MODE&&maq.supaId){
+    const mesRec=maq.meses[maq.meses.length-1];
+    sbPost('meses',{maquina_id:maq.supaId,periodo:mesRec.period||'',total_facturado:mesRec.totalFact||0,utilidad_neta:mesRec.utilNeta||0,consumo_gs:mesRec.consGs||{},datos_completos:mesRec,saved_at:new Date().toISOString()}).catch(function(e){console.error('sync mes:',e);});
+    syncStockSupa(maq.code).catch(function(e){console.error('sync stock mes:',e);});
+  }
   
   // Feedback visual claro
   btn.disabled = false;
@@ -1543,6 +1558,26 @@ function recalcStock(maq){
   });
 }
 
+
+async function syncCISupa(code){
+  if(!ONLINE_MODE)return;
+  const maq=MAQ[code];if(!maq||!maq.supaId)return;
+  // Subir CI como stock inicial: gramos = potes × pG
+  const items=P.map(function(p){
+    const ci=maq.ci[p.rk];
+    return{
+      maquina_id:maq.supaId,
+      producto_rkey:p.rk,
+      gramos_actuales:maq.stock[p.rk]||0,
+      ci_potes:(ci&&ci.potes)||0,
+      ci_precio:(ci&&ci.precio)||0
+    };
+  });
+  await sbFetch('stock?on_conflict=maquina_id,producto_rkey',{
+    method:'POST',body:items,
+    prefer:'resolution=merge-duplicates,return=minimal'
+  });
+}
 function saveStock(){
   const maq=getMaq($('mCd').value||'E00225');
   // Leer CI del formulario
@@ -1552,7 +1587,9 @@ function saveStock(){
   });
   // Recalcular stock dinámicamente
   recalcStock(maq);
-  recalcStock(maq);recalcInv(maq);savMAQ();renderStock();
+  recalcStock(maq);recalcInv(maq);savMAQ();
+  syncCISupa($('mCd').value||'E00225').catch(function(e){console.error('sync CI:',e);});
+  renderStock();
   const btn=event.target;btn.textContent='✓ Stock guardado';btn.style.background='var(--ver)';setTimeout(()=>{btn.textContent='💾 Guardar stock';btn.style.background='';},1500);
 }
 
@@ -1571,7 +1608,9 @@ function aplicarSugerida(perfil){
     maq.ci[p.rk]={potes:pot,precio};
   });
   if(!maq.meses.length){P.forEach(p=>{maq.stock[p.rk]=(maq.ci[p.rk].potes||0)*p.pG;});}
-  recalcInv(maq);savMAQ();renderStock();
+  recalcInv(maq);savMAQ();
+  syncCISupa($('mCd').value||'E00225').catch(function(e){console.error('sync CI perfil:',e);});
+  renderStock();
 }
 
 // ── MI MÁQUINA ────────────────────────────────────────────────
