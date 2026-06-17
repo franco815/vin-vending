@@ -2245,7 +2245,7 @@ function confirmarRedistribucion(rk,codeOrig,codeDest,inputId){
   renderAlertas();updateAlertaBadge();
 }
 
-async async function renderNuevaMaquina(){
+async function renderNuevaMaquina(){
   var sel=$('nmUsuario');if(!sel)return;
   if(ONLINE_MODE){
     var users=await sbGet('usuarios');
