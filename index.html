@@ -180,8 +180,11 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
       <div class="ni" onclick="go('stock')"><span class="nic">📦</span><span>Stock</span></div>
       <div class="ni" onclick="go('maquina')"><span class="nic">🏭</span><span>Mi máquina</span></div>
       <div class="ni" onclick="go('historial')"><span class="nic">🕐</span><span>Historial</span></div>
+      <div class="ni" onclick="go('membresias')"><span class="nic">🎫</span><span>Membresías</span></div>
       <div class="nsec">Red de máquinas</div>
       <div class="ni" onclick="go('alertas')"><span class="nic" id="alertaIcon">🗂️</span><span>Stock &amp; Alertas</span></div>
+      <div class="ni" onclick="go('resumenred')"><span class="nic">📊</span><span>Resumen general</span></div>
+      <div class="ni" onclick="go('membresiasred')"><span class="nic">🎫</span><span>Membresías red</span></div>
       <div class="ni" onclick="go('market')"><span class="nic">🛒</span><span>VIN Market</span></div>
       <div class="ni admin-only" onclick="go('pedidos')" id="niPedidos"><span class="nic">📋</span><span>Pedidos <span id="badgePedidos" style="display:none;background:var(--roj);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span></span></div>
       <div class="nsec admin-only">Gestión VIN</div>
@@ -336,7 +339,7 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
             </button>
             </div>
             <button class="btn bp bsm admin-only" onclick="aplicarSugerida('grande')" title="Carga inicial perfil grande">
-              📦 Perfil grande <span style="background:rgba(255,255,255,0.2);padding:1px 6px;border-radius:4px;font-size:10px;margin-left:3px">−12%</span>
+              📦 Perfil grande 
             </button>
             <button class="btn bs bsm admin-only" onclick="aplicarSugerida('chico')" title="Carga inicial perfil chico">
               📦 Perfil chico <span style="background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:4px;font-size:10px;margin-left:3px">−10%</span>
@@ -489,11 +492,38 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
         </div>
       </div>
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <div style="font-size:13px;color:var(--gt)">Borra todos los datos guardados — máquinas, stock, historial y configuración. Usalo solo para empezar de cero en una máquina nueva o para limpiar datos de prueba.</div>
         </div>
       <div class="admin-only" style="border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.04);border-radius:12px;margin-top:.875rem"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:.875rem 1.125rem"><div><div style="font-size:13px;font-weight:700;color:var(--roj);margin-bottom:4px">⚠ Zona de reinicio</div><div style="font-size:12px;color:var(--gt)">Borra todos los datos locales.</div></div><button class="btn bsm" style="background:var(--roj);color:#fff;border:none;flex-shrink:0" onclick="resetDatos()">🗑 Reiniciar</button></div></div>
       </div>
 
-      <div id="pg-pedidos" class="view admin-only"><div class="ct" style="display:flex;justify-content:space-between;align-items:center"><span>📋 Pedidos</span><button class="btn bs bsm" onclick="cargarPedidos()">↺ Actualizar</button></div><div id="pedidosList" style="margin-top:1rem"><div style="color:var(--gt);text-align:center;padding:2rem">Sin pedidos aún.</div></div></div>
+      <!-- ══ PEDIDOS ══ -->
+      <div id="pg-pedidos" class="view admin-only">
+        <div class="ct" style="display:flex;justify-content:space-between;align-items:center">
+          <span>📋 Pedidos de franquiciados</span>
+          <button class="btn bs bsm" onclick="cargarPedidos()">↺ Actualizar</button>
+        </div>
+        <div id="pedidosList" style="margin-top:1rem"><div style="color:var(--gt);text-align:center;padding:2rem">Sin pedidos aún.</div></div>
+      </div>
+
+      <!-- ══ MEMBRESÍAS ══ -->
+      <div id="pg-membresias" class="view">
+        <div class="ct">🎫 Membresías — <span id="membMaqNm">esta máquina</span></div>
+        <div id="membresiasContent" style="margin-top:1rem"></div>
+      </div>
+
+      <!-- ══ RESUMEN RED ══ -->
+      <div id="pg-resumenred" class="view">
+        <div class="ct">📊 Resumen general — todas mis máquinas</div>
+        <div id="resumenRedContent" style="margin-top:1rem"></div>
+      </div>
+
+      <!-- ══ MEMBRESÍAS RED ══ -->
+      <div id="pg-membresiasred" class="view">
+        <div class="ct">🎫 Membresías red — todas mis máquinas</div>
+        <div id="membresiasRedContent" style="margin-top:1rem"></div>
+      </div>
+
       <!-- ══ GLOBAL ══ -->
       <div id="pg-global" class="view admin-only">
         <div class="card"><div class="ct">Resumen global — todas las máquinas</div><div id="globalCnt"></div></div>
@@ -560,7 +590,7 @@ async function loadMaquinasSupa(){
       }
       MAQ[m.codigo].supaId=m.id;
       const sd=await sbGet('stock','maquina_id=eq.'+m.id);
-      if(sd)sd.forEach(function(s){MAQ[m.codigo].stock[s.producto_rkey]=parseFloat(s.gramos_actuales)||0;if(s.ci_potes>0){MAQ[m.codigo].ci[s.producto_rkey]={potes:parseFloat(s.ci_potes)||0,precio:parseFloat(s.ci_precio)||0};}});
+      if(sd)sd.forEach(function(s){MAQ[m.codigo].stock[s.producto_rkey]=s.gramos_actuales;});
       const cd=await sbGet('compras','maquina_id=eq.'+m.id+'&order=created_at.desc');
       if(cd)MAQ[m.codigo].compras=cd;
       const md=await sbGet('meses','maquina_id=eq.'+m.id+'&order=saved_at.asc');
@@ -789,7 +819,7 @@ function enterApp(){
 }
 
 // ── NAVEGACIÓN ────────────────────────────────────────────────
-const PTIT={carga:'Cargar reporte',resultado:'Resultado del mes',stock:'Stock',maquina:'Mi máquina',historial:'Historial',market:'VIN Market',alertas:'Stock & Alertas',pedidos:'Pedidos',nuevaMaquina:'Nueva maquina',config:'Configuración',global:'Resumen global'};
+const PTIT={carga:'Cargar reporte',resultado:'Resultado del mes',stock:'Stock',maquina:'Mi máquina',historial:'Historial',market:'VIN Market',alertas:'Stock & Alertas',pedidos:'Pedidos',membresias:'Membresías',resumenred:'Resumen general',membresiasred:'Membresías red',nuevaMaquina:'Nueva maquina',config:'Configuración',global:'Resumen global'};
 function applyRole(){const isAdmin=CU&&CU.role==='admin';document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'':' none');}
 function go(n){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
@@ -814,6 +844,10 @@ function go(n){
     $('noRes').style.display=CD?'none':'block';
     $('resContent').style.display=CD?'block':'none';
   }
+  if(n==='membresias')renderMembresias();
+  if(n==='resumenred')renderResumenRed();
+  if(n==='membresiasred')renderMembresiasRed();
+  if(n==='pedidos')cargarPedidos();
   if(CU)applyRole();
 }
 
@@ -1130,7 +1164,7 @@ function renderResults(d){
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:500">${x.p.i}</div>
               <div style="font-size:10px;color:var(--gt);margin-top:1px" id="desc_${x.p.rk}">
-                ${x.potes>=(x.p.cj||99)?'<span style="color:var(--ver)">✓ Caja completa — descuento −'+Math.round((x.p.dg||x.p.uf)*100)+'%</span>':'Descuento −'+Math.round((x.p.uf||0.10)*100)+'% · caja completa a partir de '+(x.p.cj||6)+' potes'}
+                ${x.potes>=(x.p.cj||99)?'<span style="color:var(--ver)">✓ Caja completa — descuento −'+10+'%</span>':'Descuento −10% · caja completa a partir de '+(x.p.cj||6)+' potes'}
               </div>
             </div>
             <span style="font-size:11px;color:var(--gt)">potes:</span>
@@ -1168,35 +1202,26 @@ function renderResults(d){
   const hasExch=d.indExch&&Object.keys(d.indExch).length>0;
   if(!hasFree&&!hasExch){feEl.style.display='none';return;}
   feEl.style.display='block';
-  const costoVaso=PAR.VASO||150;
-  const comMembPct=(PAR.COM_MEMB||20)/100;
-  function calcGrupo(grupo){
-    const rows=[];let tProd=0,tVaso=0;
+  const costoVaso=PAR.VASO||150;const comMembPct=(PAR.COM_MEMB||20)/100;
+  function calcG(grupo){
+    const rows=[];let tP=0,tV=0;
     Object.entries(grupo||{}).forEach(function([gn,cnt]){
-      const pr=P.find(p=>p.g===gn)||P.find(p=>p.i===gn);
-      const co=CB.find(c=>c.g===gn);
-      let cu=0;
-      if(pr){cu=esVIN?pr.com*(1-pr.d)/pr.sv:pr.com*0.90/pr.sv;}
+      const pr=P.find(p=>p.g===gn)||P.find(p=>p.i===gn);const co=CB.find(c=>c.g===gn);
+      let cu=0;if(pr){cu=esVIN?pr.com*(1-pr.d)/pr.sv:pr.com*0.90/pr.sv;}
       else if(co){[co.k1,co.k2].forEach(function(k){const cp=P.find(x=>x.rk===k);if(cp)cu+=esVIN?cp.com*(1-cp.d)/cp.sv:cp.com*0.90/cp.sv;});}
-      const ctP=cu*cnt,ctV=costoVaso*cnt;tProd+=ctP;tVaso+=ctV;
-      rows.push({gn,cnt,cu,ctP,ctV,ct:ctP+ctV});
-    });
-    return{rows,tProd,tVaso,total:tProd+tVaso};
+      const ctP=cu*cnt,ctV=costoVaso*cnt;tP+=ctP;tV+=ctV;rows.push({gn,cnt,cu,ctP,ctV,ct:ctP+ctV});
+    });return{rows,tP,tV,total:tP+tV};
   }
-  const allFree=Object.assign({},d.indFree||{},d.combFree||{});
-  const allExch=Object.assign({},d.indExch||{},d.combExch||{});
-  const fg=calcGrupo(allFree);const eg=calcGrupo(allExch);
-  function tbl(rows){return`<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:var(--gt);border-bottom:1px solid var(--gb)"><th style="text-align:left;padding:4px 0">Producto</th><th style="text-align:center;padding:4px">Cant.</th><th style="text-align:right;padding:4px">Costo prod.</th><th style="text-align:right;padding:4px">Vasos</th><th style="text-align:right;padding:4px">Total</th></tr></thead><tbody>${rows.map(r=>`<tr style="border-bottom:1px solid var(--gb)"><td style="padding:5px 0">${r.gn}</td><td style="text-align:center">${r.cnt}</td><td style="text-align:right;color:var(--gt)">${peso(r.ctP)}</td><td style="text-align:right;color:var(--gt)">${peso(r.ctV)}</td><td style="text-align:right;font-weight:600">${peso(r.ct)}</td></tr>`).join('')}<tr style="border-top:2px solid var(--gb);font-weight:700"><td colspan="2" style="padding:6px 0;color:var(--gt)">TOTAL</td><td style="text-align:right;color:var(--gt)">${peso(rows.reduce((s,r)=>s+r.ctP,0))}</td><td style="text-align:right;color:var(--gt)">${peso(rows.reduce((s,r)=>s+r.ctV,0))}</td><td style="text-align:right;color:var(--roj)">${peso(rows.reduce((s,r)=>s+r.ct,0))}</td></tr></tbody></table>`;}
+  const fg=calcG(Object.assign({},d.indFree||{},d.combFree||{}));
+  const eg=calcG(Object.assign({},d.indExch||{},d.combExch||{}));
+  function tbl(rows){return`<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:var(--gt);border-bottom:1px solid var(--gb)"><th style="text-align:left;padding:4px 0">Producto</th><th style="text-align:center">Cant.</th><th style="text-align:right">Costo prod.</th><th style="text-align:right">Vasos</th><th style="text-align:right">Total</th></tr></thead><tbody>${rows.map(r=>`<tr style="border-bottom:1px solid var(--gb)"><td style="padding:5px 0">${r.gn}</td><td style="text-align:center">${r.cnt}</td><td style="text-align:right;color:var(--gt)">${peso(r.ctP)}</td><td style="text-align:right;color:var(--gt)">${peso(r.ctV)}</td><td style="text-align:right;font-weight:600">${peso(r.ct)}</td></tr>`).join('')}<tr style="border-top:2px solid var(--gb);font-weight:700"><td colspan="2" style="padding:6px 0;color:var(--gt)">TOTAL</td><td style="text-align:right;color:var(--gt)">${peso(rows.reduce((s,r)=>s+r.ctP,0))}</td><td style="text-align:right;color:var(--gt)">${peso(rows.reduce((s,r)=>s+r.ctV,0))}</td><td style="text-align:right;color:var(--roj)">${peso(rows.reduce((s,r)=>s+r.ct,0))}</td></tr></tbody></table>`;}
   let fhtml='';
-  if(hasFree){fhtml+=`<div class="card" style="margin-bottom:.75rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:13px">🎁 Consumos propios (Free)</div><div style="font-size:12px;color:var(--gt);margin-top:2px">${d.txFree||0} entregas · No facturan · Descuentan stock y vasos</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--gt)">Costo total</div><div style="font-weight:700;color:var(--roj)">${peso(fg.total)}</div></div></div>${tbl(fg.rows)}</div>`;}
+  if(hasFree){fhtml+=`<div class="card" style="margin-bottom:.75rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:13px">🎁 Consumos propios (Free)</div><div style="font-size:12px;color:var(--gt);margin-top:2px">${d.txFree||0} entregas · No facturan · Descuentan stock</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--gt)">Costo total</div><div style="font-weight:700;color:var(--roj)">${peso(fg.total)}</div></div></div>${tbl(fg.rows)}</div>`;}
   if(hasExch){
-    const txExch=d.txExch||0;
     const mk='membIngreso_'+(d.code||'')+'_'+(d.period||'').replace(/\s/g,'_');
     const membIng=parseFloat(localStorage.getItem(mk)||'0');
-    const ganNeta=membIng-eg.total;
-    const comVIN=!esVIN?Math.max(0,ganNeta)*comMembPct:0;
-    const netoFranq=ganNeta-comVIN;
-    fhtml+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:13px">🎫 Membresías canjeadas (Exchange)</div><div style="font-size:12px;color:var(--gt);margin-top:2px">${txExch} canjes este mes</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--gt)">Costo canjes</div><div style="font-weight:700;color:var(--ora)">${peso(eg.total)}</div></div></div>${tbl(eg.rows)}<div style="margin-top:1rem;padding:.875rem;background:var(--g2);border-radius:10px;border:1px solid var(--gb)"><div style="font-weight:700;font-size:12px;color:var(--gt);margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.04em">Resultado membresías del mes</div><div style="display:flex;align-items:center;gap:10px;margin-bottom:.625rem"><label style="font-size:12px;color:var(--gt);flex-shrink:0">Ingreso cobrado por membresías $</label><input type="number" id="membIngresoInput" value="${membIng}" min="0" step="1000" style="width:140px;background:var(--neg);border:1px solid var(--gb);border-radius:7px;padding:5px 9px;color:var(--bla);font-size:13px" onchange="localStorage.setItem('${mk}',this.value);renderResults(CD);"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px"><div style="color:var(--gt)">💰 Ingreso membresías:</div><div style="text-align:right;font-weight:700;color:var(--ver)">${peso(membIng)}</div><div style="color:var(--gt)">📦 Costo producto:</div><div style="text-align:right;color:var(--roj)">− ${peso(eg.tProd)}</div><div style="color:var(--gt)">🥤 Costo vasos:</div><div style="text-align:right;color:var(--roj)">− ${peso(eg.tVaso)}</div><div style="color:var(--gt);font-weight:600;border-top:1px solid var(--gb);padding-top:6px">Ganancia neta:</div><div style="text-align:right;font-weight:700;color:${ganNeta>=0?'var(--ver)':'var(--roj)'};border-top:1px solid var(--gb);padding-top:6px">${peso(ganNeta)}</div>${!esVIN?`<div style="color:var(--gt)">🏢 Comisión VIN (${PAR.COM_MEMB||20}%):</div><div style="text-align:right;color:var(--roj)">− ${peso(comVIN)}</div><div style="color:var(--bla);font-weight:700;border-top:1px solid var(--gb);padding-top:6px">Neto franquiciado:</div><div style="text-align:right;font-weight:700;color:${netoFranq>=0?'var(--ver)':'var(--roj)'};border-top:1px solid var(--gb);padding-top:6px">${peso(netoFranq)}</div>`:''}></div></div></div>`;
+    const ganNeta=membIng-eg.total;const comVIN=!esVIN?Math.max(0,ganNeta)*comMembPct:0;const netoFranq=ganNeta-comVIN;
+    fhtml+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:13px">🎫 Membresías canjeadas (Exchange)</div><div style="font-size:12px;color:var(--gt);margin-top:2px">${d.txExch||0} canjes este mes</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--gt)">Costo canjes</div><div style="font-weight:700;color:var(--ora)">${peso(eg.total)}</div></div></div>${tbl(eg.rows)}<div style="margin-top:1rem;padding:.875rem;background:var(--g2);border-radius:10px;border:1px solid var(--gb)"><div style="font-weight:700;font-size:12px;color:var(--gt);margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.04em">Resultado membresías del mes</div><div style="display:flex;align-items:center;gap:10px;margin-bottom:.625rem"><label style="font-size:12px;color:var(--gt);flex-shrink:0">Ingreso cobrado $</label><input type="number" id="membIngresoInput" value="${membIng}" min="0" step="1000" style="width:140px;background:var(--neg);border:1px solid var(--gb);border-radius:7px;padding:5px 9px;color:var(--bla);font-size:13px" onchange="localStorage.setItem('${mk}',this.value);renderResults(CD);"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px"><div style="color:var(--gt)">💰 Ingreso:</div><div style="text-align:right;font-weight:700;color:var(--ver)">${peso(membIng)}</div><div style="color:var(--gt)">📦 Costo producto:</div><div style="text-align:right;color:var(--roj)">− ${peso(eg.tP)}</div><div style="color:var(--gt)">🥤 Vasos:</div><div style="text-align:right;color:var(--roj)">− ${peso(eg.tV)}</div><div style="color:var(--gt);font-weight:600;border-top:1px solid var(--gb);padding-top:6px">Ganancia neta:</div><div style="text-align:right;font-weight:700;color:${ganNeta>=0?'var(--ver)':'var(--roj)'};border-top:1px solid var(--gb);padding-top:6px">${peso(ganNeta)}</div>${!esVIN?`<div style="color:var(--gt)">🏢 Comisión VIN (${PAR.COM_MEMB||20}%):</div><div style="text-align:right;color:var(--roj)">− ${peso(comVIN)}</div><div style="color:var(--bla);font-weight:700;border-top:1px solid var(--gb);padding-top:6px">Neto franquiciado:</div><div style="text-align:right;font-weight:700;color:${netoFranq>=0?'var(--ver)':'var(--roj)'};border-top:1px solid var(--gb);padding-top:6px">${peso(netoFranq)}</div>`:''}</div></div></div>`;
   }
   feEl.innerHTML=fhtml;
 }
@@ -1411,7 +1436,7 @@ function renderStock(){
   const ciCard = $('ciCard');
   const stockPW = $('stockPreciosWarning');
   if(ciCard) ciCard.style.display = esFranq ? 'none' : '';
- if(stockPW)stockPW.style.display=esFranq?'block':'none';
+  if(stockPW)stockPW.style.display=esFranq?'block':'none';
   let pp=$('pedidoPanel');if(esFranq){if(!pp){pp=document.createElement('div');pp.id='pedidoPanel';pp.style.cssText='margin-top:1rem;border:1px solid var(--gb);border-radius:12px;overflow:hidden';const sv=$('pg-stock');if(sv)sv.appendChild(pp);}renderPedidoPanel(maq);}else{if(pp)pp.style.display='none';}
 
   // Ocultar botones de perfil para franquiciados
@@ -1601,7 +1626,7 @@ const CI_CHICO ={prot_vai:3,prot_cho:3,prot_coo:3,crea:5, carbo:3,pre:3,cola:3,g
 function aplicarSugerida(perfil){
   const maq=getMaq($('mCd').value||'E00225');
   const ci=perfil==='chico'?CI_CHICO:CI_GRANDE;
-  const desc=perfil==='grande'?'dg':'uf'; // dg=−12% grande, uf=−10% chico
+  const desc=perfil==='grande'?'dg':'uf'; // precio fijo −10%
   P.forEach(p=>{
     const pot=ci[p.rk]||1;
     const descPct=p[desc]||p.uf; // descuento sobre comercial
@@ -1899,8 +1924,8 @@ function renderMarket(){
   P.forEach(function(p){
     var ci=maq.ci[p.rk];if(!ci||!ci.potes)return;
     if(maq.inactivos&&maq.inactivos[p.rk])return;
-    var precioChico=p.com*(1-(esVIN?p.d:p.uf));
-    var precioGrande=p.com*(1-(esVIN?p.d:(p.dg||p.uf)));
+    var precioFranq=p.com*0.90;var precioChico=esVIN?p.com*(1-p.d):precioFranq;
+    var precioGrande=esVIN?p.com*(1-p.d):precioFranq;
     var gs=maq.stock[p.rk]||0;
     var pot=(gs/p.pG).toFixed(1);
     var enAlerta=gs<=p.rs*p.pG*(PAR.AL/100);
@@ -1908,7 +1933,7 @@ function renderMarket(){
       +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
       +'<div style="flex:1;min-width:140px">'
       +'<div style="font-size:13px;font-weight:600">'+p.i+' <span class="bdg '+getMB(p.m)+'">'+p.m+'</span>'+(enAlerta?' <span class="bdg bre" style="font-size:9px">BAJO</span>':'')+'</div>'
-      +'<div style="font-size:11px;color:var(--gt);margin-top:2px">Stock: '+pot+' potes | Unitario: $'+Math.round(precioChico).toLocaleString('es-AR')+' | Caja '+( p.cj||6)+'u: <span style="color:var(--ver)">$'+Math.round(precioGrande).toLocaleString('es-AR')+' (-'+Math.round((p.dg||p.uf)*100)+'%)</span></div>'
+      +'<div style="font-size:11px;color:var(--gt);margin-top:2px">Stock: '+pot+' potes | Unitario: $'+Math.round(precioChico).toLocaleString('es-AR')+' | Caja '+( p.cj||6)+'u: <span style="color:var(--ver)">$'+Math.round(precioGrande).toLocaleString('es-AR')+' (-10%)</span></div>'
       +'</div>'
       +'<div style="display:flex;align-items:center;gap:6px">'
       +'<input type="number" id="mkt_'+p.rk+'" value="0" min="0" max="99" data-chico="'+precioChico+'" data-grande="'+precioGrande+'" data-cj="'+(p.cj||6)+'" data-pg="'+p.pG+'" oninput="recalcMarket()" style="width:65px;text-align:center;background:var(--g2);border:1px solid var(--gb);border-radius:7px;padding:6px;color:var(--bla);font-size:14px">'
@@ -2160,7 +2185,7 @@ function renderPedidoPanel(maq){
   if(PEDIDO_ACTUAL.maquinaCode!==code)PEDIDO_ACTUAL={items:{},maquinaCode:code};
   const items=PEDIDO_ACTUAL.items;
   const tieneItems=Object.keys(items).some(k=>items[k]>0);
-  let h=`<div style="padding:.875rem 1.125rem;background:var(--g2);border-bottom:1px solid var(--gb)"><div style="font-weight:700;font-size:13px">🛒 Hacer un pedido a VIN</div><div style="font-size:12px;color:var(--gt);margin-top:2px">Seleccioná los productos que necesitás. VIN confirmará y actualizará tu stock.</div></div><div style="padding:.875rem 1.125rem">`;
+  let h=`<div style="padding:.875rem 1.125rem;background:var(--g2);border-bottom:1px solid var(--gb)"><div style="font-weight:700;font-size:13px">🛒 Hacer un pedido a VIN</div><div style="font-size:12px;color:var(--gt);margin-top:2px">Seleccioná los productos. VIN confirmará y actualizará tu stock.</div></div><div style="padding:.875rem 1.125rem">`;
   P.forEach(function(p){
     const stk=Math.max(0,Math.floor((maq.stock[p.rk]||0)/p.pG));
     const qty=items[p.rk]||0;
@@ -2181,7 +2206,7 @@ async function enviarPedido(){
   const items=PEDIDO_ACTUAL.items,code=PEDIDO_ACTUAL.maquinaCode,maq=MAQ[code];
   if(!maq||!maq.supaId)return;
   const detalle=[];let total=0;
-  P.forEach(function(p){const qty=items[p.rk]||0;if(qty>0){const precio=p.com*0.90;const sub=qty*precio;total+=sub;detalle.push({rk:p.rk,nombre:p.i,potes:qty,precioUnit:Math.round(precio),subtotal:Math.round(sub)});}});
+  P.forEach(function(p){const qty=items[p.rk]||0;if(qty>0){const sub=qty*p.com*0.90;total+=sub;detalle.push({rk:p.rk,nombre:p.i,potes:qty,precioUnit:Math.round(p.com*0.90),subtotal:Math.round(sub)});}});
   if(!detalle.length)return;
   const btn=document.querySelector('#pedidoPanel button[onclick="enviarPedido()"]');
   if(btn){btn.disabled=true;btn.textContent='Enviando...';}
@@ -2201,7 +2226,7 @@ async function cargarPedidos(){
   if(!pedidos||!pedidos.length){el.innerHTML='<div style="color:var(--gt);text-align:center;padding:2rem">No hay pedidos todavía.</div>';return;}
   const maqMap={};Object.values(MAQ).forEach(function(m){if(m.supaId)maqMap[m.supaId]=m.name;});
   el.innerHTML=pedidos.map(function(p){
-    const mn=maqMap[p.maquina_id]||'Máquina desconocida';
+    const mn=maqMap[p.maquina_id]||'Máquina';
     const fecha=new Date(p.created_at).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
     const det=(p.detalle||[]).map(function(d){return d.potes+'× '+d.nombre;}).join(', ');
     const ec=p.estado==='pendiente'?'var(--ora)':p.estado==='aceptado'?'var(--ver)':'var(--roj)';
@@ -2229,6 +2254,203 @@ function actualizarBadgePedidos(n){
 }
 
 setInterval(function(){if(CU&&CU.role==='admin'&&ONLINE_MODE)verificarPedidosPendientes();},60000);
+
+// ══ MEMBRESÍAS POR MÁQUINA ══════════════════════════════════════
+
+function renderMembresias(){
+  const code=(CD&&CD.code)||$('mCd').value||'E00225';
+  const maq=MAQ[code]||{};
+  if($('membMaqNm'))$('membMaqNm').textContent=maq.name||code;
+  const el=$('membresiasContent');if(!el)return;
+
+  // Obtener todos los meses de esta máquina
+  const meses=maq.meses||[];
+  // Obtener datos de membresías guardados en localStorage
+  const membData=JSON.parse(localStorage.getItem('memb_'+code)||'{}');
+  // membData = { "Mayo 2026": {vendidas:10, precio:10000}, "Junio 2026": {vendidas:5, precio:10000} }
+
+  // Calcular canjes Exchange de los meses guardados
+  let totalVendidas=0,totalCanjeadas=0,totalIngreso=0,totalCostoCanjes=0;
+
+  let html2='<div style="display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap">';
+  html2+=`<button class="btn bp bsm" onclick="abrirModalMemb('${code}')">+ Registrar venta de membresías</button>`;
+  html2+='</div>';
+
+  if(!Object.keys(membData).length&&!meses.some(m=>m.txExch>0)){
+    html2+='<div class="card" style="text-align:center;padding:2rem;color:var(--gt)">No hay membresías registradas para esta máquina.<br><span style="font-size:12px">Registrá ventas con el botón de arriba.</span></div>';
+    el.innerHTML=html2;return;
+  }
+
+  // Tabla por mes
+  html2+='<div class="card"><div class="ct" style="margin-bottom:.75rem">Historial por mes</div>';
+  html2+='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="color:var(--gt);border-bottom:1px solid var(--gb)"><th style="text-align:left;padding:5px 0">Mes</th><th style="text-align:center">Vendidas</th><th style="text-align:center">Canjeadas</th><th style="text-align:center">Activas</th><th style="text-align:right">Ingreso</th><th style="text-align:right">Costo canjes</th><th style="text-align:right">Ganancia</th></tr></thead><tbody>';
+
+  // Combinar meses con datos Excel y datos de membresías
+  const todosLosMeses=new Set();
+  Object.keys(membData).forEach(m=>todosLosMeses.add(m));
+  meses.forEach(m=>{if(m.period)todosLosMeses.add(m.period);});
+
+  Array.from(todosLosMeses).sort().forEach(function(mes){
+    const md=membData[mes]||{vendidas:0,precio:0};
+    const mesData=meses.find(m=>m.period===mes)||{};
+    const canjeadas=(mesData.txExch||0)+(mesData.combExch?Object.values(mesData.combExch||{}).reduce((s,v)=>s+v,0):0);
+    const ingreso=(md.vendidas||0)*(md.precio||0);
+    const IVAr=PAR.IVA/100;
+    // Costo aproximado de los canjes
+    let costoCanjes=0;
+    const allExch=Object.assign({},mesData.indExch||{},mesData.combExch||{});
+    Object.entries(allExch).forEach(function([gn,cnt]){
+      const pr=P.find(p=>p.g===gn)||P.find(p=>p.i===gn);
+      if(pr){const esVIN=(mesData.tipo==='VIN');costoCanjes+=cnt*((esVIN?pr.com*(1-pr.d):pr.com*0.90)/pr.sv)+(cnt*(PAR.VASO||150));}
+    });
+    const ganancia=ingreso-costoCanjes;
+    const activas=Math.max(0,(md.vendidas||0)-canjeadas);
+    totalVendidas+=(md.vendidas||0);totalCanjeadas+=canjeadas;
+    totalIngreso+=ingreso;totalCostoCanjes+=costoCanjes;
+    html2+=`<tr style="border-bottom:1px solid var(--gb)"><td style="padding:6px 0;font-weight:600">${mes}</td><td style="text-align:center">${md.vendidas||0}</td><td style="text-align:center">${canjeadas}</td><td style="text-align:center;font-weight:700;color:var(--ver)">${activas}</td><td style="text-align:right;color:var(--ver)">${peso(ingreso)}</td><td style="text-align:right;color:var(--roj)">−${peso(costoCanjes)}</td><td style="text-align:right;font-weight:700;color:${ganancia>=0?'var(--ver)':'var(--roj)'}">${peso(ganancia)}</td></tr>`;
+  });
+
+  const totalActivas=totalVendidas-totalCanjeadas;
+  const totalGan=totalIngreso-totalCostoCanjes;
+  html2+=`<tr style="border-top:2px solid var(--gb);font-weight:700"><td style="padding:8px 0">TOTAL</td><td style="text-align:center">${totalVendidas}</td><td style="text-align:center">${totalCanjeadas}</td><td style="text-align:center;color:var(--ver)">${totalActivas}</td><td style="text-align:right;color:var(--ver)">${peso(totalIngreso)}</td><td style="text-align:right;color:var(--roj)">−${peso(totalCostoCanjes)}</td><td style="text-align:right;color:${totalGan>=0?'var(--ver)':'var(--roj)'}">${peso(totalGan)}</td></tr>`;
+  html2+='</tbody></table></div>';
+
+  // Cards resumen
+  html2+=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem;margin-top:.75rem">
+    <div class="card" style="text-align:center"><div style="font-size:11px;color:var(--gt);margin-bottom:4px">MEMBRESÍAS ACTIVAS</div><div style="font-size:2rem;font-weight:700;color:var(--ver)">${totalActivas}</div><div style="font-size:11px;color:var(--gt)">sin canjear</div></div>
+    <div class="card" style="text-align:center"><div style="font-size:11px;color:var(--gt);margin-bottom:4px">INGRESO TOTAL</div><div style="font-size:1.5rem;font-weight:700;color:var(--ver)">${peso(totalIngreso)}</div></div>
+    <div class="card" style="text-align:center"><div style="font-size:11px;color:var(--gt);margin-bottom:4px">GANANCIA NETA</div><div style="font-size:1.5rem;font-weight:700;color:${totalGan>=0?'var(--ver)':'var(--roj)'}">${peso(totalGan)}</div></div>
+  </div>`;
+
+  el.innerHTML=html2;
+}
+
+function abrirModalMemb(code){
+  const period=$('mPr')?$('mPr').value:'';
+  const mes=prompt('¿Para qué mes registrás?',period||new Date().toLocaleDateString('es-AR',{month:'long',year:'numeric'}));
+  if(!mes)return;
+  const vendidas=parseInt(prompt('¿Cuántas membresías vendiste en '+mes+'?','0'));
+  if(isNaN(vendidas)||vendidas<0)return;
+  const precio=parseFloat(prompt('¿A qué precio cada una ($)?','10000'));
+  if(isNaN(precio)||precio<0)return;
+  const key='memb_'+code;
+  const data=JSON.parse(localStorage.getItem(key)||'{}');
+  data[mes]={vendidas:vendidas,precio:precio};
+  localStorage.setItem(key,JSON.stringify(data));
+  renderMembresias();
+}
+
+// ══ MEMBRESÍAS RED (todas las máquinas) ════════════════════════
+
+function renderMembresiasRed(){
+  const el=$('membresiasRedContent');if(!el)return;
+  const misMaqs=Object.values(MAQ).filter(function(m){
+    if(!CU)return false;
+    if(CU.role==='admin')return true;
+    return m.usuarioId===CU.id||m.usuario_id===CU.id;
+  });
+
+  let html2='';
+  let grandTotal={vendidas:0,canjeadas:0,ingreso:0,costo:0};
+
+  misMaqs.forEach(function(maq){
+    const code=maq.code||maq.codigo;
+    const membData=JSON.parse(localStorage.getItem('memb_'+code)||'{}');
+    const meses=maq.meses||[];
+    let mVend=0,mCanj=0,mIng=0,mCosto=0;
+    const todosLosMeses=new Set();
+    Object.keys(membData).forEach(m=>todosLosMeses.add(m));
+    meses.forEach(m=>{if(m.period)todosLosMeses.add(m.period);});
+
+    Array.from(todosLosMeses).forEach(function(mes){
+      const md=membData[mes]||{};
+      const mesData=meses.find(m=>m.period===mes)||{};
+      const canjeadas=(mesData.txExch||0);
+      const ingreso=(md.vendidas||0)*(md.precio||0);
+      let costoCanjes=0;
+      const allExch=Object.assign({},mesData.indExch||{});
+      Object.entries(allExch).forEach(function([gn,cnt]){
+        const pr=P.find(p=>p.g===gn)||P.find(p=>p.i===gn);
+        if(pr){const esVIN=(mesData.tipo==='VIN');costoCanjes+=cnt*((esVIN?pr.com*(1-pr.d):pr.com*0.90)/pr.sv)+(cnt*(PAR.VASO||150));}
+      });
+      mVend+=(md.vendidas||0);mCanj+=canjeadas;mIng+=ingreso;mCosto+=costoCanjes;
+    });
+
+    grandTotal.vendidas+=mVend;grandTotal.canjeadas+=mCanj;
+    grandTotal.ingreso+=mIng;grandTotal.costo+=mCosto;
+    const activas=Math.max(0,mVend-mCanj);
+    const gan=mIng-mCosto;
+
+    html2+=`<div class="card" style="margin-bottom:.75rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div style="font-weight:700">🏭 ${maq.name||code}</div>
+        <div style="display:flex;gap:16px;font-size:13px">
+          <span style="color:var(--gt)">Vendidas: <strong>${mVend}</strong></span>
+          <span style="color:var(--gt)">Canjeadas: <strong>${mCanj}</strong></span>
+          <span style="color:var(--ver)">Activas: <strong>${activas}</strong></span>
+          <span style="color:var(--ver)">Ganancia: <strong>${peso(gan)}</strong></span>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  const totalActivas=grandTotal.vendidas-grandTotal.canjeadas;
+  const totalGan=grandTotal.ingreso-grandTotal.costo;
+  html2=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem;margin-bottom:1rem">
+    <div class="card" style="text-align:center"><div style="font-size:11px;color:var(--gt);margin-bottom:4px">ACTIVAS TOTAL</div><div style="font-size:2rem;font-weight:700;color:var(--ver)">${totalActivas}</div></div>
+    <div class="card" style="text-align:center"><div style="font-size:11px;color:var(--gt);margin-bottom:4px">INGRESO TOTAL</div><div style="font-size:1.5rem;font-weight:700;color:var(--ver)">${peso(grandTotal.ingreso)}</div></div>
+    <div class="card" style="text-align:center"><div style="font-size:11px;color:var(--gt);margin-bottom:4px">GANANCIA NETA</div><div style="font-size:1.5rem;font-weight:700;color:${totalGan>=0?'var(--ver)':'var(--roj)'}">${peso(totalGan)}</div></div>
+  </div>`+html2;
+
+  el.innerHTML=html2||'<div style="color:var(--gt);text-align:center;padding:2rem">Sin datos de membresías.</div>';
+}
+
+// ══ RESUMEN GENERAL RED ════════════════════════════════════════
+
+function renderResumenRed(){
+  const el=$('resumenRedContent');if(!el)return;
+  const misMaqs=Object.values(MAQ).filter(function(m){
+    if(!CU)return false;
+    if(CU.role==='admin')return true;
+    return m.usuarioId===CU.id||m.usuario_id===CU.id;
+  });
+
+  if(!misMaqs.length){el.innerHTML='<div style="color:var(--gt);text-align:center;padding:2rem">No hay máquinas registradas.</div>';return;}
+
+  let totalFact=0,totalUtil=0,totalMeses=0;
+  let html2='';
+
+  misMaqs.forEach(function(maq){
+    const code=maq.code||maq.codigo;
+    const meses=maq.meses||[];
+    if(!meses.length)return;
+    let mFact=0,mUtil=0;
+    meses.forEach(function(m){mFact+=(m.totalFact||m.fact||0);mUtil+=(m.utilNeta||m.util||0);});
+    totalFact+=mFact;totalUtil+=mUtil;totalMeses+=meses.length;
+
+    html2+=`<div class="card" style="margin-bottom:.75rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:.5rem">
+        <div style="font-weight:700">🏭 ${maq.name||code} <span style="font-size:11px;color:var(--gt);font-weight:400">${meses.length} mes${meses.length>1?'es':''}</span></div>
+        <span class="bdg ${maq.tipo==='VIN'?'baz':'bpu'}" style="font-size:10px">${maq.tipo||'VIN'}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:13px">
+        <div><div style="color:var(--gt);font-size:11px">Facturado total</div><div style="font-weight:700;color:var(--bla)">${peso(mFact)}</div></div>
+        <div><div style="color:var(--gt);font-size:11px">Utilidad neta</div><div style="font-weight:700;color:${mUtil>=0?'var(--ver)':'var(--roj)'}">${peso(mUtil)}</div></div>
+        <div><div style="color:var(--gt);font-size:11px">Prom. mensual</div><div style="font-weight:700;color:var(--bla)">${peso(mFact/meses.length)}</div></div>
+      </div>
+    </div>`;
+  });
+
+  html2=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem;margin-bottom:1rem">
+    <div class="card" style="text-align:center"><div style="font-size:11px;color:var(--gt);margin-bottom:4px">FACTURACIÓN TOTAL</div><div style="font-size:1.4rem;font-weight:700;color:var(--bla)">${peso(totalFact)}</div></div>
+    <div class="card" style="text-align:center"><div style="font-size:11px;color:var(--gt);margin-bottom:4px">UTILIDAD NETA TOTAL</div><div style="font-size:1.4rem;font-weight:700;color:${totalUtil>=0?'var(--ver)':'var(--roj)'}">${peso(totalUtil)}</div></div>
+    <div class="card" style="text-align:center"><div style="font-size:11px;color:var(--gt);margin-bottom:4px">MESES REGISTRADOS</div><div style="font-size:1.4rem;font-weight:700;color:var(--bla)">${totalMeses}</div></div>
+  </div>`+html2;
+
+  el.innerHTML=html2||'<div style="color:var(--gt);text-align:center;padding:2rem">Sin datos guardados aún.</div>';
+}
+
+// ══ FREE/EXCHANGE EN RESULTADO ══════════════════════════════════
 
 </script>
 
