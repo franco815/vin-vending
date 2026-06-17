@@ -189,7 +189,9 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
       <div class="ni" onclick="go('market')"><span class="nic">🛒</span><span>VIN Market</span></div>
       <div class="ni" onclick="go('misPedidos')" id="niMisPedidos"><span class="nic">📬</span><span>Mis pedidos <span id="badgeMisPedidos" style="display:none;background:var(--azu);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span></span></div>
       <div class="ni admin-only" onclick="go('pedidos')" id="niPedidos"><span class="nic">📋</span><span>Pedidos <span id="badgePedidos" style="display:none;background:var(--roj);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span></span></div>
+      <div class="ni admin-only" onclick="go('stockVin')"><span class="nic">🏬</span><span>Stock VIN</span></div>
       <div class="nsec admin-only">Gestión VIN</div>
+      <div class="ni admin-only" onclick="go('stockVIN')"><span class="nic">📦</span><span>Stock VIN</span></div>
       <div class="ni admin-only" onclick="go('config')"><span class="nic">⚙️</span><span>Configuración</span></div>
       <div class="ni admin-only" onclick="go('global')"><span class="nic">🌐</span><span>Resumen global</span></div>
     </nav>
@@ -450,6 +452,17 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
             <div id="nmMsg" style="font-size:12px;display:none"></div>
           </div>
         </div>
+
+        <div style="margin:1.5rem 0 1rem"><div style="font-size:16px;font-weight:700">Reasignar máquina existente</div>
+        <div style="font-size:13px;color:var(--gt);margin-top:2px">Cambiá el franquiciado asignado a una máquina que ya existe.</div></div>
+        <div class="card" style="max-width:480px">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div><label>Máquina</label><select id="raMaquina"><option value="">-- selecciona --</option></select></div>
+            <div><label>Nuevo usuario asignado</label><select id="raUsuario"><option value="">-- selecciona --</option></select></div>
+            <button class="btn bp" onclick="reasignarMaquina()">Reasignar máquina</button>
+            <div id="raMsg" style="font-size:12px;display:none"></div>
+          </div>
+        </div>
       </div>
 
       <!-- CONFIG  -->
@@ -516,6 +529,17 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
         </div>
       </div>
 
+      <!-- ══ STOCK VIN ══ -->
+      <div id="pg-stockVin" class="view admin-only">
+        <div class="ct">🏬 Stock VIN — Depósito central</div>
+        <div style="font-size:13px;color:var(--gt);margin-top:2px;margin-bottom:1rem">Inventario propio de VIN para abastecer máquinas o vender a franquiciados. Editá las cantidades a mano.</div>
+        <div id="stockVinTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem"></div>
+        <div id="stockVinItems"></div>
+        <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--gb)">
+          <button class="btn bs bsm" onclick="go('config')">+ Agregar marca / producto nuevo (en Configuración)</button>
+        </div>
+      </div>
+
       <!-- ══ PEDIDOS ══ -->
       <div id="pg-pedidos" class="view admin-only">
         <div class="ct" style="display:flex;justify-content:space-between;align-items:center">
@@ -523,6 +547,19 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
           <button class="btn bs bsm" onclick="cargarPedidos()">↺ Actualizar</button>
         </div>
         <div id="pedidosList" style="margin-top:1rem"><div style="color:var(--gt);text-align:center;padding:2rem">Sin pedidos aún.</div></div>
+      </div>
+
+      <!-- ══ STOCK VIN ══ -->
+      <div id="pg-stockVIN" class="view admin-only">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-size:18px;font-weight:700">📦 Stock VIN</div>
+            <div style="font-size:13px;color:var(--gt);margin-top:2px">Inventario central de VIN. Editá las cantidades manualmente. Se organiza por las marcas de Configuración.</div>
+          </div>
+          <button class="btn bs bsm" onclick="renderStockVIN()">↺ Actualizar</button>
+        </div>
+        <div id="stockVINTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem"></div>
+        <div id="stockVINContent"></div>
       </div>
 
       <!-- ══ MEMBRESÍAS ══ -->
@@ -609,7 +646,7 @@ async function loadMaquinasSupa(){
   try{
     if(CU.role==='admin'){
       const us=await sbGet('usuarios','select=id,name,username,role');
-      if(us)us.forEach(function(u){USUARIOS_MAP[u.id]={name:u.name||u.username,username:u.username,role:u.role};});
+      if(us)us.forEach(function(u){USUARIOS_MAP[u.id]={name:u.nombre||u.username,username:u.username,role:u.role};});
     }
     const q=CU.role==='admin'?'activa=eq.true':'usuario_id=eq.'+CU.id+'&activa=eq.true';
     const maquinas=await sbGet('maquinas',q+'&order=nombre');
@@ -666,6 +703,9 @@ let CB=[
 let PAR={MP:5,IVA:21,FR:10,AL:50,PISO:1000000,VASO:150,COM_MEMB:20};
 let PEDIDO_ACTUAL={items:{},maquinaCode:null};
 let USUARIOS_MAP={};
+let STOCK_VIN={}; // {rk: potes}
+let STOCK_VIN_TAB=null;
+const STOCK_VIN_KEY='v4_stockVIN';
 
 // Máquinas: { [code]: { name, code, tipo, ci:{rk:{potes,precio}}, stock:{rk:gs}, meses:[], invTotal, ivaCredTotal } }
 let MAQ={};
@@ -678,6 +718,7 @@ function loadLS(){
     const p=localStorage.getItem('v4_p');if(p)P=JSON.parse(p);
     const c=localStorage.getItem('v4_c');if(c)CB=JSON.parse(c);
     const pr=localStorage.getItem('v4_par');if(pr){const _p=JSON.parse(pr);PAR=Object.assign({MP:5,IVA:21,FR:10,AL:50,PISO:1000000,VASO:150,COM_MEMB:20},_p);}
+  const sv=localStorage.getItem('v4_stockvin');if(sv)STOCK_VIN=JSON.parse(sv);
     const m=localStorage.getItem('v4_maq');if(m)MAQ=JSON.parse(m);
   }catch(e){}
 }
@@ -876,7 +917,7 @@ function enterApp(){
 }
 
 // ── NAVEGACIÓN ────────────────────────────────────────────────
-const PTIT={carga:'Cargar reporte',resultado:'Resultado del mes',stock:'Stock',maquina:'Mi máquina',historial:'Historial',market:'VIN Market',alertas:'Stock & Alertas',pedidos:'Pedidos',membresias:'Membresías',resumenred:'Resumen general',membresiasred:'Membresías red',misPedidos:'Mis pedidos',nuevoFranq:'Nuevo franquiciado',nuevaMaquina:'Nueva maquina',config:'Configuración',global:'Resumen global'};
+const PTIT={carga:'Cargar reporte',resultado:'Resultado del mes',stock:'Stock',maquina:'Mi máquina',historial:'Historial',market:'VIN Market',alertas:'Stock & Alertas',pedidos:'Pedidos',membresias:'Membresías',resumenred:'Resumen general',membresiasred:'Membresías red',misPedidos:'Mis pedidos',stockVIN:'Stock VIN',stockVin:'Stock VIN',nuevoFranq:'Nuevo franquiciado',nuevaMaquina:'Nueva maquina',config:'Configuración',global:'Resumen global'};
 function applyRole(){const isAdmin=CU&&CU.role==='admin';document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'':' none');}
 function go(n){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
@@ -905,8 +946,10 @@ function go(n){
   if(n==='resumenred')renderResumenRed();
   if(n==='membresiasred')renderMembresiasRed();
   if(n==='pedidos')cargarPedidos();
+  if(n==='stockVin')renderStockVin();
   if(n==='misPedidos')renderMisPedidos();
   if(n==='nuevoFranq')renderNuevoFranq();
+  if(n==='stockVIN')renderStockVIN();
   if(CU)applyRole();
 }
 
@@ -2247,13 +2290,50 @@ function confirmarRedistribucion(rk,codeOrig,codeDest,inputId){
 
 async function renderNuevaMaquina(){
   var sel=$('nmUsuario');if(!sel)return;
+  var usersOptHtml='<option value="">-- selecciona --</option>';
   if(ONLINE_MODE){
     var users=await sbGet('usuarios');
     if(users){
-      users.forEach(function(u){USUARIOS_MAP[u.id]={name:u.name||u.username,username:u.username,role:u.role};});
-      sel.innerHTML='<option value="">-- selecciona --</option>'+users.map(function(u){return '<option value="'+u.id+'">'+(u.name||u.username)+' ('+u.username+')</option>';}).join('');
+      users.forEach(function(u){USUARIOS_MAP[u.id]={name:u.nombre||u.username,username:u.username,role:u.role};});
+      usersOptHtml='<option value="">-- selecciona --</option>'+users.map(function(u){return '<option value="'+u.id+'">'+(u.nombre||u.username)+' ('+u.username+')</option>';}).join('');
     }
   }
+  sel.innerHTML=usersOptHtml;
+
+  // Reasignar máquina: llenar selectores
+  var raMaq=$('raMaquina'),raUsu=$('raUsuario');
+  if(raMaq){
+    raMaq.innerHTML='<option value="">-- selecciona --</option>'+Object.keys(MAQ).map(function(c){
+      var uname=(MAQ[c].usuarioId&&USUARIOS_MAP[MAQ[c].usuarioId]&&USUARIOS_MAP[MAQ[c].usuarioId].name)||'sin asignar';
+      return '<option value="'+c+'">'+MAQ[c].name+' ('+c+') — actual: '+uname+'</option>';
+    }).join('');
+  }
+  if(raUsu)raUsu.innerHTML=usersOptHtml;
+}
+
+async function reasignarMaquina(){
+  var code=$('raMaquina').value;
+  var usuarioId=$('raUsuario').value;
+  var msg=$('raMsg');
+  if(!code){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Elegí una máquina.';return;}
+  if(!usuarioId){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Elegí el nuevo usuario.';return;}
+  var btn=event&&event.target?event.target:document.querySelector('[onclick="reasignarMaquina()"]');
+  btn.disabled=true;btn.textContent='Guardando...';msg.style.display='none';
+  var maq=MAQ[code];
+  if(!maq||!maq.supaId){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Máquina no encontrada o sin ID de Supabase.';btn.disabled=false;btn.textContent='Reasignar máquina';return;}
+  try{
+    await sbFetch('maquinas?id=eq.'+maq.supaId,{method:'PATCH',body:{usuario_id:usuarioId},prefer:'return=minimal'});
+    maq.usuarioId=usuarioId;
+    savMAQ();renderSelectorMaquinas();
+    var uname=(USUARIOS_MAP[usuarioId]&&USUARIOS_MAP[usuarioId].name)||usuarioId;
+    msg.style.display='block';msg.style.color='var(--ver)';
+    msg.textContent='✓ '+maq.name+' reasignada a '+uname+'.';
+    renderNuevaMaquina();
+  }catch(e){
+    console.error('reasignarMaquina:',e);
+    msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error al reasignar. Intentá de nuevo.';
+  }
+  btn.disabled=false;btn.textContent='Reasignar máquina';
 }
 
 async function crearMaquina(){var codigo=$('nmCodigo').value.trim().toUpperCase(),nombre=$('nmNombre').value.trim(),tipo=$('nmTipo').value,usuarioId=$('nmUsuario').value,msg=$('nmMsg');var btn=event&&event.target?event.target:document.querySelector('[onclick="crearMaquina()"]');if(!codigo||!nombre){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Completá código y nombre.';return;}btn.disabled=true;btn.textContent='Verificando...';msg.style.display='none';var ci={};P.forEach(function(p){ci[p.rk]={potes:0,precio:p.com*(1-p.d)};});var stk={};P.forEach(function(p){stk[p.rk]=0;});var newMaq={name:nombre,code:codigo,tipo:tipo,ci:ci,stock:stk,meses:[],compras:[],invTotal:0,ivaCredTotal:0,fechaAlta:new Date().toLocaleDateString('es-AR'),inactivos:{},usuarioId:usuarioId||null};if(ONLINE_MODE){try{var existe=await sbGet('maquinas','codigo=eq.'+codigo);if(existe&&existe.length>0){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='El código '+codigo+' ya existe. Elegí otro.';btn.disabled=false;btn.textContent='Crear maquina';return;}btn.textContent='Creando...';var res=await sbFetch('maquinas',{method:'POST',body:{codigo:codigo,nombre:nombre,tipo:tipo,usuario_id:usuarioId||null},prefer:'return=representation'});if(res&&Array.isArray(res)&&res[0]){newMaq.supaId=res[0].id;}else{var buscar=await sbGet('maquinas','codigo=eq.'+codigo);if(buscar&&buscar[0])newMaq.supaId=buscar[0].id;}}catch(e){console.error('crearMaquina:',e);msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error de conexión. Intentá de nuevo.';btn.disabled=false;btn.textContent='Crear maquina';return;}}MAQ[codigo]=newMaq;savMAQ();renderSelectorMaquinas();msg.style.display='block';msg.style.color='var(--ver)';msg.textContent='✓ Máquina '+nombre+' ('+codigo+') creada correctamente.';$('nmCodigo').value='';$('nmNombre').value='';btn.disabled=false;btn.textContent='Crear maquina';}
@@ -2274,14 +2354,20 @@ async function crearFranquiciado(){
     var existe=await sbGet('usuarios','username=eq.'+username);
     if(existe&&existe.length>0){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='El usuario "'+username+'" ya existe. Elegí otro.';btn.disabled=false;btn.textContent='Crear franquiciado';return;}
     btn.textContent='Creando...';
-    var res=await sbFetch('usuarios',{method:'POST',body:{name:nombre,username:username,password:password,role:'franquiciado'},prefer:'return=representation'});
+    btn.textContent='Creando...';
+    var res=await sbFetch('usuarios',{method:'POST',body:{nombre:nombre,username:username,password_hash:password,role:'franquiciado'},prefer:'return=representation'});
+    if(!res||!Array.isArray(res)||!res[0]){
+      // Fallback: probar con columna "password" en vez de "password_hash"
+      res=await sbFetch('usuarios',{method:'POST',body:{nombre:nombre,username:username,password:password,role:'franquiciado'},prefer:'return=representation'});
+    }
     if(res&&Array.isArray(res)&&res[0]){
       USUARIOS_MAP[res[0].id]={name:nombre,username:username,role:'franquiciado'};
       msg.style.display='block';msg.style.color='var(--ver)';
       msg.textContent='✓ Franquiciado "'+nombre+'" creado. Ahora podés crear sus máquinas y asignárselo.';
       $('nfNombre').value='';$('nfUsername').value='';$('nfPassword').value='';
     } else {
-      msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error al crear. Intentá de nuevo.';
+      msg.style.display='block';msg.style.color='var(--roj)';
+      msg.textContent='Error al crear. Revisá la consola (F12) para más detalle, o que la tabla usuarios tenga las columnas correctas.';
     }
   }catch(e){
     console.error('crearFranquiciado:',e);
@@ -2609,6 +2695,79 @@ async function marcarRecibido(pedidoId){
   renderMisPedidos();
 }
 
+
+// ══ STOCK VIN — DEPÓSITO CENTRAL ════════════════════════════════
+
+function saveStockVin(){
+  try{localStorage.setItem('v4_stockvin',JSON.stringify(STOCK_VIN));}catch(e){console.error('saveStockVin:',e);}
+}
+
+function renderStockVin(){
+  var marcas=[];
+  P.forEach(function(p){if(marcas.indexOf(p.m)===-1)marcas.push(p.m);});
+  if(!STOCK_VIN_TAB||marcas.indexOf(STOCK_VIN_TAB)===-1)STOCK_VIN_TAB=marcas[0];
+
+  var tabsEl=$('stockVinTabs');
+  if(tabsEl){
+    tabsEl.innerHTML=marcas.map(function(m){
+      var activo=m===STOCK_VIN_TAB;
+      var totalMarca=P.filter(function(p){return p.m===m;}).reduce(function(s,p){return s+(STOCK_VIN[p.rk]||0);},0);
+      return '<button onclick="cambiarStockVinTab(\''+m+'\')" style="padding:6px 14px;border-radius:8px;border:1px solid '+(activo?'var(--ora)':'var(--gb)')+';background:'+(activo?'var(--ora)':'var(--g2)')+';color:'+(activo?'#fff':'var(--bla)')+';font-size:12px;font-weight:600;cursor:pointer">'+m+' <span style="opacity:.75">('+totalMarca+')</span></button>';
+    }).join('');
+  }
+
+  renderStockVinItems(STOCK_VIN_TAB);
+}
+
+function cambiarStockVinTab(marca){
+  STOCK_VIN_TAB=marca;
+  renderStockVin();
+}
+
+function renderStockVinItems(marca){
+  var el=$('stockVinItems');if(!el)return;
+  var productos=P.filter(function(p){return p.m===marca;});
+  if(!productos.length){el.innerHTML='<div style="color:var(--gt);text-align:center;padding:1.5rem;font-size:13px">No hay productos de esta marca.</div>';return;}
+
+  var html='<div class="card">';
+  productos.forEach(function(p){
+    var cant=STOCK_VIN[p.rk]||0;
+    var valorTotal=cant*p.com;
+    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gb)">'
+      +'<div style="flex:1;min-width:140px">'
+      +'<div style="font-size:13px;font-weight:600">'+p.i+'</div>'
+      +'<div style="font-size:11px;color:var(--gt);margin-top:2px">Costo unitario: $'+Math.round(p.com).toLocaleString('es-AR')+' · Valor en depósito: <span style="color:var(--ver)">$'+Math.round(valorTotal).toLocaleString('es-AR')+'</span></div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:6px">'
+      +'<button onclick="ajustarStockVin(\''+p.rk+'\',-1)" style="width:30px;height:30px;border-radius:50%;border:1px solid var(--gb);background:var(--g2);color:var(--bla);cursor:pointer;font-size:16px;line-height:1">−</button>'
+      +'<input type="number" id="svin_'+p.rk+'" value="'+cant+'" min="0" onchange="setStockVinManual(\''+p.rk+'\',this.value)" style="width:70px;text-align:center;background:var(--g2);border:1px solid var(--gb);border-radius:7px;padding:6px;color:var(--bla);font-size:14px">'
+      +'<button onclick="ajustarStockVin(\''+p.rk+'\',1)" style="width:30px;height:30px;border-radius:50%;border:1px solid var(--gb);background:var(--g2);color:var(--bla);cursor:pointer;font-size:16px;line-height:1">+</button>'
+      +'<span style="font-size:11px;color:var(--gt);min-width:40px">potes</span>'
+      +'</div></div>';
+  });
+
+  var totalValor=productos.reduce(function(s,p){return s+((STOCK_VIN[p.rk]||0)*p.com);},0);
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;margin-top:6px">'
+    +'<span style="font-size:12px;color:var(--gt);font-weight:600">VALOR TOTAL EN '+marca+'</span>'
+    +'<span style="font-size:15px;font-weight:700;color:var(--ora)">$'+Math.round(totalValor).toLocaleString('es-AR')+'</span>'
+    +'</div>';
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function ajustarStockVin(rk,delta){
+  STOCK_VIN[rk]=Math.max(0,(STOCK_VIN[rk]||0)+delta);
+  saveStockVin();
+  renderStockVin();
+}
+
+function setStockVinManual(rk,valor){
+  var n=parseFloat(valor);
+  STOCK_VIN[rk]=isNaN(n)||n<0?0:n;
+  saveStockVin();
+  renderStockVin();
+}
+
 function actualizarBadgePedidos(n){
   const badge=$('badgePedidos');if(!badge)return;
   if(n>0){badge.textContent=n;badge.style.display='inline';}else{badge.style.display='none';}
@@ -2754,6 +2913,182 @@ function renderResumenRed(){
     <div class="card" style="text-align:center"><div style="font-size:11px;color:var(--gt);margin-bottom:4px">MESES REGISTRADOS</div><div style="font-size:1.4rem;font-weight:700;color:var(--bla)">${totalMeses}</div></div>
   </div>`+html2;
   el.innerHTML=html2||'<div style="color:var(--gt);text-align:center;padding:2rem">Sin datos guardados aún.</div>';
+}
+
+
+// ══ STOCK VIN (DEPÓSITO CENTRAL) ══════════════════════════════
+
+function getStockVIN() {
+  try { return JSON.parse(localStorage.getItem(STOCK_VIN_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+
+function saveStockVIN(data) {
+  localStorage.setItem(STOCK_VIN_KEY, JSON.stringify(data));
+}
+
+function renderStockVIN() {
+  const tabsEl = $('stockVINTabs');
+  const content = $('stockVINContent');
+  if (!tabsEl || !content) return;
+
+  // Construir lista de marcas dinámicamente desde el catálogo P
+  const marcas = [];
+  P.forEach(function(p) { if (marcas.indexOf(p.m) === -1) marcas.push(p.m); });
+
+  if (!marcas.length) {
+    content.innerHTML = '<div class="card" style="text-align:center;padding:2rem;color:var(--gt)">No hay productos en el catálogo todavía. Agregá productos en Gestión VIN → Configuración.</div>';
+    return;
+  }
+
+  if (!STOCK_VIN_TAB || marcas.indexOf(STOCK_VIN_TAB) === -1) STOCK_VIN_TAB = marcas[0];
+
+  // Pestañas
+  tabsEl.innerHTML = marcas.map(function(m) {
+    const activo = m === STOCK_VIN_TAB;
+    const totalMarca = P.filter(function(p){return p.m===m;}).reduce(function(s,p){
+      return s + (getStockVIN()[p.rk] || 0);
+    }, 0);
+    return '<button onclick="cambiarStockVINTab(\'' + m + '\')" style="padding:6px 14px;border-radius:8px;border:1px solid ' +
+      (activo ? 'var(--ora)' : 'var(--gb)') + ';background:' +
+      (activo ? 'var(--ora)' : 'var(--g2)') + ';color:' +
+      (activo ? '#fff' : 'var(--bla)') + ';font-size:12px;font-weight:600;cursor:pointer">' +
+      m + ' <span style="opacity:.7;font-size:10px">(' + totalMarca + ' potes)</span></button>';
+  }).join('');
+
+  renderStockVINItems(STOCK_VIN_TAB);
+}
+
+function cambiarStockVINTab(marca) {
+  STOCK_VIN_TAB = marca;
+  renderStockVIN();
+}
+
+function renderStockVINItems(marca) {
+  const content = $('stockVINContent');
+  if (!content) return;
+
+  const stock = getStockVIN();
+  const productos = P.filter(function(p) { return p.m === marca; });
+
+  if (!productos.length) {
+    content.innerHTML = '<div class="card" style="text-align:center;padding:2rem;color:var(--gt)">No hay productos de esta marca en el catálogo.</div>';
+    return;
+  }
+
+  let totalMarca = 0;
+  let rows = productos.map(function(p) {
+    const qty = stock[p.rk] || 0;
+    totalMarca += qty;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--gb)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600">${p.i}</div>
+        <div style="font-size:11px;color:var(--gt);margin-top:2px">
+          ${p.pG}g/pote · Precio costo: $${Math.round(p.com*(1-p.d)).toLocaleString('es-AR')}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button onclick="ajustarStockVIN('${p.rk}',-1)"
+          style="width:32px;height:32px;border-radius:50%;border:1px solid var(--gb);background:var(--g2);color:var(--bla);cursor:pointer;font-size:18px;line-height:1;flex-shrink:0">−</button>
+        <input type="number" id="svQty_${p.rk}" value="${qty}" min="0"
+          onchange="setStockVIN('${p.rk}',this.value)"
+          style="width:70px;text-align:center;background:var(--neg);border:1px solid var(--gb);border-radius:8px;padding:6px;color:var(--bla);font-size:15px;font-weight:700">
+        <button onclick="ajustarStockVIN('${p.rk}',1)"
+          style="width:32px;height:32px;border-radius:50%;border:1px solid var(--gb);background:var(--g2);color:var(--bla);cursor:pointer;font-size:18px;line-height:1;flex-shrink:0">+</button>
+        <span style="font-size:11px;color:var(--gt);min-width:40px">potes</span>
+        <span style="min-width:90px;text-align:right;font-size:12px;font-weight:600;color:${qty<=2?'var(--roj)':qty<=5?'var(--ama)':'var(--ver)'}">
+          ${qty===0?'Sin stock':qty<=2?'⚠ Stock bajo':qty<=5?'⚡ Stock medio':'✓ OK'}
+        </span>
+      </div>
+    </div>`;
+  }).join('');
+
+  content.innerHTML = `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.875rem;flex-wrap:wrap;gap:8px">
+      <div style="font-weight:700;font-size:15px">${marca}</div>
+      <div style="font-size:13px;color:var(--gt)">Total en depósito: <strong style="color:var(--bla)">${totalMarca} potes</strong></div>
+    </div>
+    ${rows}
+    <div style="margin-top:1rem;padding:.75rem;background:var(--g2);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;color:var(--gt)">Los cambios se guardan automáticamente en este dispositivo.</span>
+      <button onclick="exportarStockVINPDF()" style="background:var(--g2);border:1px solid var(--gb);border-radius:7px;padding:5px 12px;font-size:11px;color:var(--bla);cursor:pointer">📄 Exportar inventario PDF</button>
+    </div>
+  </div>`;
+}
+
+function ajustarStockVIN(rk, delta) {
+  const stock = getStockVIN();
+  stock[rk] = Math.max(0, (stock[rk] || 0) + delta);
+  saveStockVIN(stock);
+  const inp = document.getElementById('svQty_' + rk);
+  if (inp) inp.value = stock[rk];
+  // Actualizar color de estado sin re-renderizar todo
+  const p = P.find(function(x){return x.rk===rk;});
+  if (p) {
+    const qty = stock[rk];
+    const statusEl = inp && inp.parentElement && inp.parentElement.querySelector('span:last-child');
+    if (statusEl) {
+      statusEl.style.color = qty<=2?'var(--roj)':qty<=5?'var(--ama)':'var(--ver)';
+      statusEl.textContent = qty===0?'Sin stock':qty<=2?'⚠ Stock bajo':qty<=5?'⚡ Stock medio':'✓ OK';
+    }
+  }
+  // Actualizar contador en pestaña
+  renderStockVIN();
+}
+
+function setStockVIN(rk, val) {
+  const stock = getStockVIN();
+  stock[rk] = Math.max(0, parseInt(val) || 0);
+  saveStockVIN(stock);
+  renderStockVIN();
+}
+
+function exportarStockVINPDF() {
+  const { jsPDF } = window.jspdf;
+  if (!jsPDF) { alert('PDF no disponible. Verificá la conexión a internet.'); return; }
+  const doc = new jsPDF();
+  const stock = getStockVIN();
+  let y = 20;
+
+  doc.setFontSize(18); doc.setFont(undefined, 'bold');
+  doc.text('VIN Vending — Inventario Central', 14, y); y += 8;
+  doc.setFontSize(10); doc.setFont(undefined, 'normal');
+  doc.text('Generado: ' + new Date().toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}), 14, y); y += 12;
+
+  // Agrupar por marca
+  const marcas = [];
+  P.forEach(function(p) { if (marcas.indexOf(p.m) === -1) marcas.push(p.m); });
+
+  marcas.forEach(function(marca) {
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFont(undefined, 'bold'); doc.setFontSize(13);
+    doc.text(marca, 14, y); y += 6;
+    doc.setFont(undefined, 'normal'); doc.setFontSize(10);
+
+    const prods = P.filter(function(p) { return p.m === marca; });
+    prods.forEach(function(p) {
+      const qty = stock[p.rk] || 0;
+      const estado = qty === 0 ? 'Sin stock' : qty <= 2 ? 'Stock bajo' : qty <= 5 ? 'Stock medio' : 'OK';
+      doc.text('  ' + p.i, 14, y);
+      doc.text(String(qty) + ' potes', 140, y);
+      doc.text(estado, 170, y);
+      y += 6;
+      if (y > 270) { doc.addPage(); y = 20; }
+    });
+
+    const totalMarca = prods.reduce(function(s,p){return s+(stock[p.rk]||0);},0);
+    doc.setFont(undefined, 'bold');
+    doc.text('  Total ' + marca + ': ' + totalMarca + ' potes', 14, y);
+    y += 10;
+    doc.setFont(undefined, 'normal');
+  });
+
+  const totalGeneral = P.reduce(function(s,p){return s+(stock[p.rk]||0);},0);
+  if (y > 250) { doc.addPage(); y = 20; }
+  doc.setFont(undefined, 'bold'); doc.setFontSize(12);
+  doc.text('TOTAL GENERAL: ' + totalGeneral + ' potes', 14, y);
+
+  doc.save('StockVIN_' + new Date().toISOString().slice(0,10) + '.pdf');
 }
 
 </script>
