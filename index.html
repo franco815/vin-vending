@@ -182,8 +182,8 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
       <div class="ni" onclick="go('historial')"><span class="nic">🕐</span><span>Historial</span></div>
       <div class="nsec">Red de máquinas</div>
       <div class="ni" onclick="go('alertas')"><span class="nic" id="alertaIcon">🗂️</span><span>Stock &amp; Alertas</span></div>
-      <div class="ni admin-only" onclick="go('pedidos')" id="niPedidos"><span class="nic">📋</span><span>Pedidos <span id="badgePedidos" style="display:none;background:var(--roj);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span></span></div>
       <div class="ni" onclick="go('market')"><span class="nic">🛒</span><span>VIN Market</span></div>
+      <div class="ni admin-only" onclick="go('pedidos')" id="niPedidos"><span class="nic">📋</span><span>Pedidos <span id="badgePedidos" style="display:none;background:var(--roj);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span></span></div>
       <div class="nsec admin-only">Gestión VIN</div>
       <div class="ni admin-only" onclick="go('config')"><span class="nic">⚙️</span><span>Configuración</span></div>
       <div class="ni admin-only" onclick="go('global')"><span class="nic">🌐</span><span>Resumen global</span></div>
@@ -317,6 +317,7 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
           </div>
           <!-- SUGERENCIA STOCK -->
           <div id="stockSug"></div>
+          <div id="freeExchBox" style="display:none;margin-top:1rem"></div>
         </div>
       </div>
 
@@ -481,30 +482,18 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
             <div style="min-width:80px"><label>IVA %</label><input type="number" id="pIv" value="21" step=".1" style="width:80px" onchange="savePar()"></div>
             <div style="min-width:150px"><label>Util. franq. base %</label><input type="number" id="pFr" value="10" step=".5" style="width:80px" onchange="savePar()"></div>
             <div style="min-width:140px"><label>Alerta stock %</label><input type="number" id="pAl" value="50" step="5" style="width:80px" onchange="savePar()"></div>
+            <div style="min-width:200px"><label>Piso facturación franq. $</label><input type="number" id="pPiso" value="1000000" step="50000" style="width:130px" onchange="savePar()"></div>
+            <div style="min-width:160px"><label>Costo vaso $</label><input type="number" id="pVaso" value="150" step="10" style="width:100px" onchange="savePar()"></div>
+            <div style="min-width:210px"><label>Comisión VIN membresías %</label><input type="number" id="pComMemb" value="20" step="1" style="width:80px" onchange="savePar()"></div>
           </div>
         </div>
       </div>
-
-      <!-- ══ DANGER ZONE ══ -->
-      <div class="card admin-only" style="border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04);margin-top:0">
-        <div class="ct" style="color:var(--roj)">⚠ Zona de reinicio</div>
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-          <div style="font-size:13px;color:var(--gt)">Borra todos los datos guardados — máquinas, stock, historial y configuración. Usalo solo para empezar de cero en una máquina nueva o para limpiar datos de prueba.</div>
-          <button class="btn bsm" style="background:var(--roj);color:#fff;border:none;flex-shrink:0" onclick="resetDatos()">🗑 Reiniciar todos los datos</button>
         </div>
+      <div class="admin-only" style="border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.04);border-radius:12px;margin-top:.875rem"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:.875rem 1.125rem"><div><div style="font-size:13px;font-weight:700;color:var(--roj);margin-bottom:4px">⚠ Zona de reinicio</div><div style="font-size:12px;color:var(--gt)">Borra todos los datos locales.</div></div><button class="btn bsm" style="background:var(--roj);color:#fff;border:none;flex-shrink:0" onclick="resetDatos()">🗑 Reiniciar</button></div></div>
       </div>
 
-      <!-- ══ PEDIDOS ══ -->
-      <div id="pg-pedidos" class="view admin-only">
-        <div class="ct" style="display:flex;justify-content:space-between;align-items:center">
-          <span>📋 Pedidos de franquiciados</span>
-          <button class="btn bs bsm" onclick="cargarPedidos()">↺ Actualizar</button>
-        </div>
-        <div id="pedidosList" style="margin-top:1rem">
-          <div style="color:var(--gt);text-align:center;padding:2rem">Cargando pedidos...</div>
-        </div>
-      </div>
-
+      <div id="pg-pedidos" class="view admin-only"><div class="ct" style="display:flex;justify-content:space-between;align-items:center"><span>📋 Pedidos</span><button class="btn bs bsm" onclick="cargarPedidos()">↺ Actualizar</button></div><div id="pedidosList" style="margin-top:1rem"><div style="color:var(--gt);text-align:center;padding:2rem">Sin pedidos aún.</div></div></div>
       <!-- ══ GLOBAL ══ -->
       <div id="pg-global" class="view admin-only">
         <div class="card"><div class="ct">Resumen global — todas las máquinas</div><div id="globalCnt"></div></div>
@@ -517,22 +506,18 @@ td input:focus{background:var(--g2);border:1px solid var(--ora);outline:none}
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 
-let ONLINE_MODE=false;
-let PEDIDO_ACTUAL={items:{},maquinaCode:null};
-setInterval(function(){if(CU&&CU.role==='admin'&&ONLINE_MODE)verificarPedidosPendientes();},60000); // pedido en curso del franquiciadolet MAQ_ACTIVA=null;
+let ONLINE_MODE=false;let MAQ_ACTIVA=null;
 
 async function sbFetch(path,opt){
   if(!opt)opt={};
   const headers={'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Content-Type':'application/json'};
   if(opt.prefer)headers['Prefer']=opt.prefer;
-  const _ctrl=new AbortController();
-  const _tmr=setTimeout(()=>_ctrl.abort(),8000);
+  const _c=new AbortController();const _t=setTimeout(()=>_c.abort(),8000);
   try{
-    const res=await fetch('https://vsbhiffdomrmgfiwlsvo.supabase.co/rest/v1/'+path,{headers:headers,method:opt.method||'GET',body:opt.body?JSON.stringify(opt.body):undefined,signal:_ctrl.signal});
-    clearTimeout(_tmr);
-    if(!res.ok){const t=await res.text();console.error('Supa:',t);return null;}
+    const res=await fetch('https://vsbhiffdomrmgfiwlsvo.supabase.co/rest/v1/'+path,{headers:headers,method:opt.method||'GET',body:opt.body?JSON.stringify(opt.body):undefined,signal:_c.signal});
+    clearTimeout(_t);if(!res.ok){const t=await res.text();console.error('Supa:',t);return null;}
     const t=await res.text();return t?JSON.parse(t):null;
-  }catch(e){clearTimeout(_tmr);if(e.name!=='AbortError')console.error('sbFetch:',e);return null;}
+  }catch(e){clearTimeout(_t);if(e.name!=='AbortError')console.error('sbFetch:',e);return null;}
 }
 const sbGet=(t,q)=>sbFetch(t+(q?'?'+q:''));
 const sbPost=(t,b)=>sbFetch(t,{method:'POST',body:b});
@@ -554,11 +539,7 @@ async function checkOnline(){
   }catch(e){ONLINE_MODE=false;}
   return ONLINE_MODE;
 }
-async function loginSupa(u,p){
-  let r=await sbGet('usuarios','username=eq.'+u+'&password_hash=eq.'+p);
-  if(!r||!r.length)r=await sbGet('usuarios','username=eq.'+u+'&password=eq.'+p);
-  return r&&r.length?r[0]:null;
-}
+async function loginSupa(u,p){let r=await sbGet('usuarios','username=eq.'+u+'&password_hash=eq.'+p);if(!r||!r.length)r=await sbGet('usuarios','username=eq.'+u+'&password=eq.'+p);return r&&r.length?r[0]:null;}
 async function syncStockSupa(code){
   const maq=MAQ[code];if(!maq||!maq.supaId)return;
   const items=P.map(function(p){return{maquina_id:maq.supaId,producto_rkey:p.rk,gramos_actuales:maq.stock[p.rk]||0};});
@@ -579,10 +560,7 @@ async function loadMaquinasSupa(){
       }
       MAQ[m.codigo].supaId=m.id;
       const sd=await sbGet('stock','maquina_id=eq.'+m.id);
-      if(sd)sd.forEach(function(s){
-        MAQ[m.codigo].stock[s.producto_rkey]=parseFloat(s.gramos_actuales)||0;
-        if(s.ci_potes>0){MAQ[m.codigo].ci[s.producto_rkey]={potes:parseFloat(s.ci_potes)||0,precio:parseFloat(s.ci_precio)||0};}
-      });
+      if(sd)sd.forEach(function(s){MAQ[m.codigo].stock[s.producto_rkey]=parseFloat(s.gramos_actuales)||0;if(s.ci_potes>0){MAQ[m.codigo].ci[s.producto_rkey]={potes:parseFloat(s.ci_potes)||0,precio:parseFloat(s.ci_precio)||0};}});
       const cd=await sbGet('compras','maquina_id=eq.'+m.id+'&order=created_at.desc');
       if(cd)MAQ[m.codigo].compras=cd;
       const md=await sbGet('meses','maquina_id=eq.'+m.id+'&order=saved_at.asc');
@@ -621,7 +599,8 @@ let CB=[
   {g:'Carbo Energy Fruit Punch + Creatina',   i:'Carbo Energy + Creatina',       pv:2950,k1:'carbo',   k2:'crea'},
   {g:'Colagen Sport Naranja + Creatina',      i:'Colágeno + Creatina',           pv:3750,k1:'cola',    k2:'crea'},
 ];
-let PAR={MP:5,IVA:21,FR:10,AL:50,PISO:1000000};
+let PAR={MP:5,IVA:21,FR:10,AL:50,PISO:1000000,VASO:150,COM_MEMB:20};
+let PEDIDO_ACTUAL={items:{},maquinaCode:null};
 
 // Máquinas: { [code]: { name, code, tipo, ci:{rk:{potes,precio}}, stock:{rk:gs}, meses:[], invTotal, ivaCredTotal } }
 let MAQ={};
@@ -633,13 +612,14 @@ function loadLS(){
   try{
     const p=localStorage.getItem('v4_p');if(p)P=JSON.parse(p);
     const c=localStorage.getItem('v4_c');if(c)CB=JSON.parse(c);
-    const pr=localStorage.getItem('v4_par');if(pr)PAR=JSON.parse(pr);
+    const pr=localStorage.getItem('v4_par');if(pr){const _p=JSON.parse(pr);PAR=Object.assign({MP:5,IVA:21,FR:10,AL:50,PISO:1000000,VASO:150,COM_MEMB:20},_p);}
     const m=localStorage.getItem('v4_maq');if(m)MAQ=JSON.parse(m);
   }catch(e){}
 }
 function savMAQ(){try{localStorage.setItem('v4_maq',JSON.stringify(MAQ));}catch(e){}
   if(ONLINE_MODE&&CD)syncStockSupa(CD.code).catch(function(e){console.error('sync:',e);});}
-function savPar(){PAR.MP=parseFloat($('pMp').value)||5;PAR.IVA=parseFloat($('pIv').value)||21;PAR.FR=parseFloat($('pFr').value)||10;PAR.AL=parseFloat($('pAl').value)||50;try{localStorage.setItem('v4_par',JSON.stringify(PAR));}catch(e){}}
+function savPar(){PAR.MP=parseFloat($('pMp').value)||5;PAR.IVA=parseFloat($('pIv').value)||21;PAR.FR=parseFloat($('pFr').value)||10;PAR.AL=parseFloat($('pAl').value)||50;if($('pPiso'))PAR.PISO=parseFloat($('pPiso').value)||1000000;if($('pVaso'))PAR.VASO=parseFloat($('pVaso').value)||150;if($('pComMemb'))PAR.COM_MEMB=parseFloat($('pComMemb').value)||20;try{localStorage.setItem('v4_par',JSON.stringify(PAR));}catch(e){}}
+function savePar(){savPar();}
 
 function getMaq(code,name,tipo){
   if(!MAQ[code]){
@@ -810,10 +790,7 @@ function enterApp(){
 
 // ── NAVEGACIÓN ────────────────────────────────────────────────
 const PTIT={carga:'Cargar reporte',resultado:'Resultado del mes',stock:'Stock',maquina:'Mi máquina',historial:'Historial',market:'VIN Market',alertas:'Stock & Alertas',pedidos:'Pedidos',nuevaMaquina:'Nueva maquina',config:'Configuración',global:'Resumen global'};
-function applyRole(){
-  const isAdmin=CU&&CU.role==='admin';
-  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'':' none');
-}
+function applyRole(){const isAdmin=CU&&CU.role==='admin';document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'':' none');}
 function go(n){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(x=>x.classList.remove('on'));
@@ -855,14 +832,7 @@ const DEMOS={
     ind:{'Whey Protein Vainilla':8,'Whey Protein Chocolate':3,'Whey Protein Cookies Cream':7,'Creatina Micronizada':15,'Carbo Energy Fruit Punch':8,'Pre Entreno Fuit Punch':3,'Colagen Sport Naranja':4},
     comb:{'Whey Protein Vainilla + Creatina':5,'Whey Protein Chocolate + Creatina':3,'Whey Protein Cookies Cream + Creatina':4,'Carbo Energy Fruit Punch + Creatina':1}},
 };
-function demo(mes){
-  const d=Object.assign({},DEMOS[mes]);
-  const activaCode=$('mCd').value||d.code;
-  const activaMaq=MAQ[activaCode];
-  if(activaMaq){d.code=activaCode;d.name=activaMaq.name||activaCode;d.tipo=activaMaq.tipo||d.tipo;}
-  $('mNm').value=d.name;$('mCd').value=d.code;$('mPr').value=d.period;$('mTp').value=d.tipo;
-  renderResults(d);
-}
+function demo(mes){const d=Object.assign({},DEMOS[mes]);const ac=$('mCd').value||d.code;const am=MAQ[ac];if(am){d.code=ac;d.name=am.name||ac;d.tipo=am.tipo||d.tipo;}$('mNm').value=d.name;$('mCd').value=d.code;$('mPr').value=d.period;$('mTp').value=d.tipo;renderResults(d);}
 
 // ── ARCHIVO ───────────────────────────────────────────────────
 function handleFile(f){
@@ -875,16 +845,7 @@ function handleFile(f){
   catch(err){st.style.cssText='display:block;padding:7px 11px;border-radius:7px;font-size:13px;background:rgba(239,68,68,.1);color:#FCA5A5';st.textContent='✕ Error al leer';}};
   r.readAsArrayBuffer(f);
 }
-function procFile(){
-  if(!rawRows.length){demo('mayo');return;}
-  let hr=-1;for(let i=0;i<rawRows.length;i++){if(rawRows[i].some(c=>String(c).includes('Goods Name'))){hr=i;break;}}
-  if(hr<0){alert('No encontré columna "Goods Name"');return;}
-  const h=rawRows[hr];const iG=h.findIndex(x=>String(x).includes('Goods'));const iS=h.findIndex(x=>String(x).toLowerCase().includes('order status'));
-  const ind={},comb={};let tx=0;
-  for(let i=hr+1;i<rawRows.length;i++){const row=rawRows[i];if(!row[iG]||String(row[iS]).trim()!=='Complete')continue;tx++;const gn=String(row[iG]).trim();
-    if(P.find(p=>p.g===gn))ind[gn]=(ind[gn]||0)+1;else if(CB.find(c=>c.g===gn))comb[gn]=(comb[gn]||0)+1;}
-  renderResults({name:$('mNm').value,code:$('mCd').value,period:$('mPr').value,tipo:$('mTp').value,totalTx:tx,ind,comb});
-}
+function procFile(){if(!rawRows.length){demo('mayo');return;}let hr=-1;for(let i=0;i<rawRows.length;i++){if(rawRows[i].some(c=>String(c).includes('Goods Name')||String(c).includes('Order Number'))){hr=i;break;}}if(hr<0){alert('No encontré encabezado.');return;}const h=rawRows[hr];const iG=h.findIndex(x=>String(x).includes('Goods'));const iS=h.findIndex(x=>String(x).toLowerCase().includes('order status'));const iM=h.findIndex(x=>String(x).toLowerCase().includes('method'));if(iG<0||iS<0){alert('No encontré columnas requeridas.');return;}const ind={},comb={},indFree={},combFree={},indExch={},combExch={};let txMP=0,txFree=0,txExch=0,totalMP=0;for(let i=hr+1;i<rawRows.length;i++){const row=rawRows[i];if(!row[iG])continue;if(String(row[iS]||'').trim()!=='Complete')continue;const gn=String(row[iG]).trim();const method=iM>=0?String(row[iM]||'').trim():'Mercado Pago';const amount=parseFloat(row[5]||0);const esMP=method==='Mercado Pago',esFree=method==='Free',esExch=method==='Exchange';const esProd=P.find(p=>p.g===gn);const esComb=CB.find(c=>c.g===gn);if(esMP){txMP++;totalMP+=amount;if(esProd)ind[gn]=(ind[gn]||0)+1;else if(esComb)comb[gn]=(comb[gn]||0)+1;else ind[gn]=(ind[gn]||0)+1;}else if(esFree){txFree++;if(esProd)indFree[gn]=(indFree[gn]||0)+1;else if(esComb)combFree[gn]=(combFree[gn]||0)+1;else indFree[gn]=(indFree[gn]||0)+1;}else if(esExch){txExch++;if(esProd)indExch[gn]=(indExch[gn]||0)+1;else if(esComb)combExch[gn]=(combExch[gn]||0)+1;else indExch[gn]=(indExch[gn]||0)+1;}}renderResults({name:$('mNm').value,code:$('mCd').value,period:$('mPr').value,tipo:$('mTp').value,totalTx:txMP+txFree+txExch,txMP,txFree,txExch,ind,comb,indFree,combFree,indExch,combExch,totalMP});}
 function recalc(){if(CD)renderResults(CD);}
 
 // ── RENDER RESULTADO ──────────────────────────────────────────
@@ -898,7 +859,7 @@ function renderResults(d){
   $('noRes').style.display='none';$('resContent').style.display='block';
   $('rTit').textContent=($('mNm').value||d.name)+' — '+($('mPr').value||d.period);
   const tb=d.tipo==='VIN'?'<span class="tvin">VIN</span>':'<span class="tfr">Franquiciado</span>';
-  $('rSub').innerHTML=d.code+' · '+tb+' · '+d.totalTx+' transacciones';
+  $('rSub').innerHTML=d.code+' · '+tb+' · '+d.totalTx+' transacciones'+(d.txMP!==undefined?' ('+d.txMP+' MP · '+(d.txFree||0)+' Free · '+(d.txExch||0)+' Exchange)':'');
   $('ttipo').innerHTML=tb;$('gVq').value=d.totalTx;
 
   const IVA=PAR.IVA/100,MP=PAR.MP/100;
@@ -1007,7 +968,7 @@ function renderResults(d){
     {k:'− Gastos operativos neto',           v:'− '+peso(gOpN), c:'var(--roj)'},
     {k:'Utilidad bruta real',                 v:peso(utilBruta),c:'var(--ver)',sub:true},
     {k:'− IVA a pagar',                      v:'− '+peso(ivaPag),c:'var(--roj)'},
-    {k:'− '+$('gGn').value+' ('+$('gGp').value+'%)',v:'− '+peso(comG),c:'var(--roj)'},
+    {k:'− '+$('gGn').value+' ('+$('gGp').value+'% s/'+((!esVIN&&fact<PAR.PISO)?'piso $'+Math.round(PAR.PISO/1000)+'k':'fact. real')+')',v:'− '+peso(comG),c:'var(--roj)'},
     {k:'− '+$('gIn').value+' ('+$('gIp').value+'%)',v:'− '+peso(prevI),c:'var(--roj)'},
     {k:'UTILIDAD NETA DEL MES',              v:peso(utilNeta), c:utilNeta>=0?'var(--ora)':'var(--roj)',tot:true},
   ].map(r=>`<div class="fr${r.sub?' sub':r.tot?' tot':''}">
@@ -1200,6 +1161,44 @@ function renderResults(d){
   maq._pend={consGs,stockTras,utilNeta,utilProd,fact,period:d.period,totalTx:d.totalTx};
   // Reactivar botón de guardar mes
   const btnSave=document.querySelector("button[onclick='saveMonth()']");if(btnSave){btnSave.disabled=false;btnSave.textContent="💾 Guardar mes";btnSave.style.background="";}
+
+  // ── FREE Y EXCHANGE ─────────────────────────────────────────
+  const feEl=$('freeExchBox');if(!feEl)return;
+  const hasFree=d.indFree&&Object.keys(d.indFree).length>0;
+  const hasExch=d.indExch&&Object.keys(d.indExch).length>0;
+  if(!hasFree&&!hasExch){feEl.style.display='none';return;}
+  feEl.style.display='block';
+  const costoVaso=PAR.VASO||150;
+  const comMembPct=(PAR.COM_MEMB||20)/100;
+  function calcGrupo(grupo){
+    const rows=[];let tProd=0,tVaso=0;
+    Object.entries(grupo||{}).forEach(function([gn,cnt]){
+      const pr=P.find(p=>p.g===gn)||P.find(p=>p.i===gn);
+      const co=CB.find(c=>c.g===gn);
+      let cu=0;
+      if(pr){cu=esVIN?pr.com*(1-pr.d)/pr.sv:pr.com*0.90/pr.sv;}
+      else if(co){[co.k1,co.k2].forEach(function(k){const cp=P.find(x=>x.rk===k);if(cp)cu+=esVIN?cp.com*(1-cp.d)/cp.sv:cp.com*0.90/cp.sv;});}
+      const ctP=cu*cnt,ctV=costoVaso*cnt;tProd+=ctP;tVaso+=ctV;
+      rows.push({gn,cnt,cu,ctP,ctV,ct:ctP+ctV});
+    });
+    return{rows,tProd,tVaso,total:tProd+tVaso};
+  }
+  const allFree=Object.assign({},d.indFree||{},d.combFree||{});
+  const allExch=Object.assign({},d.indExch||{},d.combExch||{});
+  const fg=calcGrupo(allFree);const eg=calcGrupo(allExch);
+  function tbl(rows){return`<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:var(--gt);border-bottom:1px solid var(--gb)"><th style="text-align:left;padding:4px 0">Producto</th><th style="text-align:center;padding:4px">Cant.</th><th style="text-align:right;padding:4px">Costo prod.</th><th style="text-align:right;padding:4px">Vasos</th><th style="text-align:right;padding:4px">Total</th></tr></thead><tbody>${rows.map(r=>`<tr style="border-bottom:1px solid var(--gb)"><td style="padding:5px 0">${r.gn}</td><td style="text-align:center">${r.cnt}</td><td style="text-align:right;color:var(--gt)">${peso(r.ctP)}</td><td style="text-align:right;color:var(--gt)">${peso(r.ctV)}</td><td style="text-align:right;font-weight:600">${peso(r.ct)}</td></tr>`).join('')}<tr style="border-top:2px solid var(--gb);font-weight:700"><td colspan="2" style="padding:6px 0;color:var(--gt)">TOTAL</td><td style="text-align:right;color:var(--gt)">${peso(rows.reduce((s,r)=>s+r.ctP,0))}</td><td style="text-align:right;color:var(--gt)">${peso(rows.reduce((s,r)=>s+r.ctV,0))}</td><td style="text-align:right;color:var(--roj)">${peso(rows.reduce((s,r)=>s+r.ct,0))}</td></tr></tbody></table>`;}
+  let fhtml='';
+  if(hasFree){fhtml+=`<div class="card" style="margin-bottom:.75rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:13px">🎁 Consumos propios (Free)</div><div style="font-size:12px;color:var(--gt);margin-top:2px">${d.txFree||0} entregas · No facturan · Descuentan stock y vasos</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--gt)">Costo total</div><div style="font-weight:700;color:var(--roj)">${peso(fg.total)}</div></div></div>${tbl(fg.rows)}</div>`;}
+  if(hasExch){
+    const txExch=d.txExch||0;
+    const mk='membIngreso_'+(d.code||'')+'_'+(d.period||'').replace(/\s/g,'_');
+    const membIng=parseFloat(localStorage.getItem(mk)||'0');
+    const ganNeta=membIng-eg.total;
+    const comVIN=!esVIN?Math.max(0,ganNeta)*comMembPct:0;
+    const netoFranq=ganNeta-comVIN;
+    fhtml+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:13px">🎫 Membresías canjeadas (Exchange)</div><div style="font-size:12px;color:var(--gt);margin-top:2px">${txExch} canjes este mes</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--gt)">Costo canjes</div><div style="font-weight:700;color:var(--ora)">${peso(eg.total)}</div></div></div>${tbl(eg.rows)}<div style="margin-top:1rem;padding:.875rem;background:var(--g2);border-radius:10px;border:1px solid var(--gb)"><div style="font-weight:700;font-size:12px;color:var(--gt);margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.04em">Resultado membresías del mes</div><div style="display:flex;align-items:center;gap:10px;margin-bottom:.625rem"><label style="font-size:12px;color:var(--gt);flex-shrink:0">Ingreso cobrado por membresías $</label><input type="number" id="membIngresoInput" value="${membIng}" min="0" step="1000" style="width:140px;background:var(--neg);border:1px solid var(--gb);border-radius:7px;padding:5px 9px;color:var(--bla);font-size:13px" onchange="localStorage.setItem('${mk}',this.value);renderResults(CD);"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px"><div style="color:var(--gt)">💰 Ingreso membresías:</div><div style="text-align:right;font-weight:700;color:var(--ver)">${peso(membIng)}</div><div style="color:var(--gt)">📦 Costo producto:</div><div style="text-align:right;color:var(--roj)">− ${peso(eg.tProd)}</div><div style="color:var(--gt)">🥤 Costo vasos:</div><div style="text-align:right;color:var(--roj)">− ${peso(eg.tVaso)}</div><div style="color:var(--gt);font-weight:600;border-top:1px solid var(--gb);padding-top:6px">Ganancia neta:</div><div style="text-align:right;font-weight:700;color:${ganNeta>=0?'var(--ver)':'var(--roj)'};border-top:1px solid var(--gb);padding-top:6px">${peso(ganNeta)}</div>${!esVIN?`<div style="color:var(--gt)">🏢 Comisión VIN (${PAR.COM_MEMB||20}%):</div><div style="text-align:right;color:var(--roj)">− ${peso(comVIN)}</div><div style="color:var(--bla);font-weight:700;border-top:1px solid var(--gb);padding-top:6px">Neto franquiciado:</div><div style="text-align:right;font-weight:700;color:${netoFranq>=0?'var(--ver)':'var(--roj)'};border-top:1px solid var(--gb);padding-top:6px">${peso(netoFranq)}</div>`:''}></div></div></div>`;
+  }
+  feEl.innerHTML=fhtml;
 }
 
 function confirmarCompra(items){
@@ -1412,21 +1411,8 @@ function renderStock(){
   const ciCard = $('ciCard');
   const stockPW = $('stockPreciosWarning');
   if(ciCard) ciCard.style.display = esFranq ? 'none' : '';
-  if(stockPW) stockPW.style.display = esFranq ? 'block' : 'none';
-  // Panel de pedido para franquiciados
-  let pedidoPanel = $('pedidoPanel');
-  if(esFranq){
-    if(!pedidoPanel){
-      pedidoPanel = document.createElement('div');
-      pedidoPanel.id = 'pedidoPanel';
-      pedidoPanel.style.cssText = 'margin-top:1rem;border:1px solid var(--gb);border-radius:12px;overflow:hidden';
-      const stockView = $('pg-stock');
-      if(stockView) stockView.appendChild(pedidoPanel);
-    }
-    renderPedidoPanel(maq);
-  } else {
-    if(pedidoPanel) pedidoPanel.style.display = 'none';
-  }
+ if(stockPW)stockPW.style.display=esFranq?'block':'none';
+  let pp=$('pedidoPanel');if(esFranq){if(!pp){pp=document.createElement('div');pp.id='pedidoPanel';pp.style.cssText='margin-top:1rem;border:1px solid var(--gb);border-radius:12px;overflow:hidden';const sv=$('pg-stock');if(sv)sv.appendChild(pp);}renderPedidoPanel(maq);}else{if(pp)pp.style.display='none';}
 
   // Ocultar botones de perfil para franquiciados
   document.querySelectorAll('#stockBtns .btn').forEach(b => {
@@ -1592,11 +1578,7 @@ function recalcStock(maq){
   });
 }
 
-async function syncCISupa(code){
-  if(!ONLINE_MODE)return;const maq=MAQ[code];if(!maq||!maq.supaId)return;
-  const items=P.map(function(p){const ci=maq.ci[p.rk];return{maquina_id:maq.supaId,producto_rkey:p.rk,gramos_actuales:maq.stock[p.rk]||0,ci_potes:(ci&&ci.potes)||0,ci_precio:(ci&&ci.precio)||0};});
-  await sbFetch('stock?on_conflict=maquina_id,producto_rkey',{method:'POST',body:items,prefer:'resolution=merge-duplicates,return=minimal'});
-}
+async function syncCISupa(code){if(!ONLINE_MODE)return;const maq=MAQ[code];if(!maq||!maq.supaId)return;const items=P.map(function(p){const ci=maq.ci[p.rk];return{maquina_id:maq.supaId,producto_rkey:p.rk,gramos_actuales:maq.stock[p.rk]||0,ci_potes:(ci&&ci.potes)||0,ci_precio:(ci&&ci.precio)||0};});await sbFetch('stock?on_conflict=maquina_id,producto_rkey',{method:'POST',body:items,prefer:'resolution=merge-duplicates,return=minimal'});}
 function saveStock(){
   const maq=getMaq($('mCd').value||'E00225');
   // Leer CI del formulario
@@ -1606,7 +1588,9 @@ function saveStock(){
   });
   // Recalcular stock dinámicamente
   recalcStock(maq);
-  recalcStock(maq);recalcInv(maq);savMAQ();renderStock();
+  recalcStock(maq);recalcInv(maq);savMAQ();
+  syncCISupa($('mCd').value||'E00225').catch(function(e){console.error('sync CI:',e);});
+  renderStock();
   const btn=event.target;btn.textContent='✓ Stock guardado';btn.style.background='var(--ver)';setTimeout(()=>{btn.textContent='💾 Guardar stock';btn.style.background='';},1500);
 }
 
@@ -1779,7 +1763,7 @@ function renderCfg(){
     <td><input type="text" value="${c.k2}" onchange="CB[${i}].k2=this.value" style="font-family:monospace;width:68px"></td>
     <td><button class="btn bg bsm" style="color:var(--roj);border-color:transparent" onclick="CB.splice(${i},1);renderCfg()">✕</button></td>
   </tr>`).join('');
-  $('pMp').value=PAR.MP;$('pIv').value=PAR.IVA;$('pFr').value=PAR.FR;$('pAl').value=PAR.AL;
+  $('pMp').value=PAR.MP;$('pIv').value=PAR.IVA;$('pFr').value=PAR.FR;$('pAl').value=PAR.AL;if($('pPiso'))$('pPiso').value=PAR.PISO||1000000;if($('pVaso'))$('pVaso').value=PAR.VASO||150;if($('pComMemb'))$('pComMemb').value=PAR.COM_MEMB||20;
 }
 function saveCfg(){try{localStorage.setItem('v4_p',JSON.stringify(P));localStorage.setItem('v4_c',JSON.stringify(CB));savPar();renderCfg();const btn=event.target;btn.textContent='✓';btn.style.background='var(--ver)';setTimeout(()=>{btn.textContent='✓ Guardar';btn.style.background='';},1400);}catch(e){}}
 
@@ -2165,211 +2149,87 @@ async function renderNuevaMaquina(){
   }
 }
 
-async function crearMaquina(){
-  var codigo=$('nmCodigo').value.trim().toUpperCase();
-  var nombre=$('nmNombre').value.trim();
-  var tipo=$('nmTipo').value;
-  var usuarioId=$('nmUsuario').value;
-  var msg=$('nmMsg');
-  if(!codigo||!nombre){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Completá código y nombre.';return;}
-  var btn=event.target;btn.disabled=true;btn.textContent='Creando...';msg.style.display='none';
-  var ci={};P.forEach(function(p){ci[p.rk]={potes:0,precio:p.com*(1-p.d)};});
-  var stk={};P.forEach(function(p){stk[p.rk]=0;});
-  var newMaq={name:nombre,code:codigo,tipo:tipo,ci:ci,stock:stk,meses:[],compras:[],invTotal:0,ivaCredTotal:0,fechaAlta:new Date().toLocaleDateString('es-AR'),inactivos:{}};
-  if(ONLINE_MODE){
-    try{
-      var existe=await sbGet('maquinas','codigo=eq.'+codigo);
-      if(existe&&existe.length>0){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='El código '+codigo+' ya existe. Usá otro.';btn.disabled=false;btn.textContent='Crear maquina';return;}
-      var insertRes=await fetch('https://vsbhiffdomrmgfiwlsvo.supabase.co/rest/v1/maquinas',{method:'POST',headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzYmhpZmZkb21ybWdmaXdsc3ZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDg5NjEsImV4cCI6MjA5NzEyNDk2MX0.BO-7WcIB7yCh0g5x8Khg-SGTGNyXjKMelb2qstHgMSE','Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({codigo:codigo,nombre:nombre,tipo:tipo,usuario_id:usuarioId||null})});
-      if(!insertRes.ok){var et=await insertRes.text();console.error('Error:',et);msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error al crear ('+insertRes.status+'). Intentá de nuevo.';btn.disabled=false;btn.textContent='Crear maquina';return;}
-      var insertData=await insertRes.json().catch(function(){return null;});
-      if(insertData&&Array.isArray(insertData)&&insertData[0]){newMaq.supaId=insertData[0].id;}
-      else{var buscar=await sbGet('maquinas','codigo=eq.'+codigo);if(buscar&&buscar[0])newMaq.supaId=buscar[0].id;}
-    }catch(e){console.error('Error:',e);msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error de conexión. Intentá de nuevo.';btn.disabled=false;btn.textContent='Crear maquina';return;}
-  }
-  MAQ[codigo]=newMaq;savMAQ();renderSelectorMaquinas();
-  msg.style.display='block';msg.style.color='var(--ver)';msg.textContent='✓ Máquina '+nombre+' ('+codigo+') creada correctamente.';
-  $('nmCodigo').value='';$('nmNombre').value='';btn.disabled=false;btn.textContent='Crear maquina';
-}
+async function crearMaquina(){var codigo=$('nmCodigo').value.trim().toUpperCase(),nombre=$('nmNombre').value.trim(),tipo=$('nmTipo').value,usuarioId=$('nmUsuario').value,msg=$('nmMsg');var btn=event&&event.target?event.target:document.querySelector('[onclick="crearMaquina()"]');if(!codigo||!nombre){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Completá código y nombre.';return;}btn.disabled=true;btn.textContent='Verificando...';msg.style.display='none';var ci={};P.forEach(function(p){ci[p.rk]={potes:0,precio:p.com*(1-p.d)};});var stk={};P.forEach(function(p){stk[p.rk]=0;});var newMaq={name:nombre,code:codigo,tipo:tipo,ci:ci,stock:stk,meses:[],compras:[],invTotal:0,ivaCredTotal:0,fechaAlta:new Date().toLocaleDateString('es-AR'),inactivos:{}};if(ONLINE_MODE){try{var existe=await sbGet('maquinas','codigo=eq.'+codigo);if(existe&&existe.length>0){msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='El código '+codigo+' ya existe. Elegí otro.';btn.disabled=false;btn.textContent='Crear maquina';return;}btn.textContent='Creando...';var res=await sbFetch('maquinas',{method:'POST',body:{codigo:codigo,nombre:nombre,tipo:tipo,usuario_id:usuarioId||null},prefer:'return=representation'});if(res&&Array.isArray(res)&&res[0]){newMaq.supaId=res[0].id;}else{var buscar=await sbGet('maquinas','codigo=eq.'+codigo);if(buscar&&buscar[0])newMaq.supaId=buscar[0].id;}}catch(e){console.error('crearMaquina:',e);msg.style.display='block';msg.style.color='var(--roj)';msg.textContent='Error de conexión. Intentá de nuevo.';btn.disabled=false;btn.textContent='Crear maquina';return;}}MAQ[codigo]=newMaq;savMAQ();renderSelectorMaquinas();msg.style.display='block';msg.style.color='var(--ver)';msg.textContent='✓ Máquina '+nombre+' ('+codigo+') creada correctamente.';$('nmCodigo').value='';$('nmNombre').value='';btn.disabled=false;btn.textContent='Crear maquina';}
 
 
-// ══ SISTEMA DE PEDIDOS ══════════════════════════════════════
+// ══ SISTEMA DE PEDIDOS ══════════════════════════════════════════
 
 function renderPedidoPanel(maq){
-  const panel = $('pedidoPanel');
-  if(!panel) return;
-  const code = maq.code || maq.codigo;
-  if(PEDIDO_ACTUAL.maquinaCode !== code){
-    PEDIDO_ACTUAL = {items:{}, maquinaCode:code};
-  }
-  const items = PEDIDO_ACTUAL.items;
-  const tieneItems = Object.keys(items).some(k=>items[k]>0);
-  let html = `<div style="padding:.875rem 1.125rem;background:var(--g2);border-bottom:1px solid var(--gb)">
-    <div style="font-weight:700;font-size:13px">🛒 Hacer un pedido a VIN</div>
-    <div style="font-size:12px;color:var(--gt);margin-top:2px">Seleccioná los productos que necesitás. VIN confirmará y actualizará tu stock.</div>
-  </div>
-  <div style="padding:.875rem 1.125rem">`;
-  
+  const panel=$('pedidoPanel');if(!panel)return;
+  const code=maq.code||maq.codigo;
+  if(PEDIDO_ACTUAL.maquinaCode!==code)PEDIDO_ACTUAL={items:{},maquinaCode:code};
+  const items=PEDIDO_ACTUAL.items;
+  const tieneItems=Object.keys(items).some(k=>items[k]>0);
+  let h=`<div style="padding:.875rem 1.125rem;background:var(--g2);border-bottom:1px solid var(--gb)"><div style="font-weight:700;font-size:13px">🛒 Hacer un pedido a VIN</div><div style="font-size:12px;color:var(--gt);margin-top:2px">Seleccioná los productos que necesitás. VIN confirmará y actualizará tu stock.</div></div><div style="padding:.875rem 1.125rem">`;
   P.forEach(function(p){
-    const stockActual = maq.stock[p.rk]||0;
-    const potes = Math.max(0, Math.floor(stockActual/p.pG));
-    const qty = items[p.rk]||0;
-    const precio = p.com*0.90;
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--gb)">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600">${p.i}</div>
-        <div style="font-size:11px;color:var(--gt)">Stock actual: ${potes} potes · Precio: $${Math.round(precio).toLocaleString('es-AR')}/pote</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <button onclick="pedidoQty('${p.rk}',-1)" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--gb);background:var(--g2);color:var(--bla);cursor:pointer;font-size:16px;line-height:1">−</button>
-        <span id="qty_${p.rk}" style="min-width:24px;text-align:center;font-weight:700">${qty}</span>
-        <button onclick="pedidoQty('${p.rk}',1)" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--gb);background:var(--g2);color:var(--bla);cursor:pointer;font-size:16px;line-height:1">+</button>
-      </div>
-    </div>`;
+    const stk=Math.max(0,Math.floor((maq.stock[p.rk]||0)/p.pG));
+    const qty=items[p.rk]||0;
+    h+=`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--gb)"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${p.i}</div><div style="font-size:11px;color:var(--gt)">Stock: ${stk} potes · $${Math.round(p.com*0.90).toLocaleString('es-AR')}/pote</div></div><div style="display:flex;align-items:center;gap:6px"><button onclick="pedidoQty('${p.rk}',-1)" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--gb);background:var(--g2);color:var(--bla);cursor:pointer;font-size:16px;line-height:1">−</button><span id="qty_${p.rk}" style="min-width:24px;text-align:center;font-weight:700">${qty}</span><button onclick="pedidoQty('${p.rk}',1)" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--gb);background:var(--g2);color:var(--bla);cursor:pointer;font-size:16px;line-height:1">+</button></div></div>`;
   });
-  
-  const total = Object.keys(items).reduce(function(sum,rk){
-    const p = P.find(function(x){return x.rk===rk;});
-    return sum + (p ? (items[rk]||0)*p.com*0.90 : 0);
-  }, 0);
-  
-  html += `</div>
-  <div style="padding:.875rem 1.125rem;display:flex;justify-content:space-between;align-items:center;background:var(--g2);border-top:1px solid var(--gb)">
-    <div style="font-size:13px;color:var(--gt)">Total estimado: <strong style="color:var(--bla)">$${Math.round(total).toLocaleString('es-AR')}</strong> c/IVA</div>
-    <button onclick="enviarPedido()" ${tieneItems?'':'disabled'} style="background:${tieneItems?'var(--ora)':'var(--g2)'};color:${tieneItems?'#fff':'var(--gt)'};border:none;border-radius:8px;padding:8px 18px;font-weight:700;cursor:${tieneItems?'pointer':'not-allowed'};font-size:13px">
-      📦 Enviar pedido a VIN
-    </button>
-  </div>`;
-  panel.innerHTML = html;
-  panel.style.display = 'block';
+  const total=Object.keys(items).reduce(function(s,rk){const p=P.find(function(x){return x.rk===rk;});return s+(p?(items[rk]||0)*p.com*0.90:0);},0);
+  h+=`</div><div style="padding:.875rem 1.125rem;display:flex;justify-content:space-between;align-items:center;background:var(--g2);border-top:1px solid var(--gb)"><div style="font-size:13px;color:var(--gt)">Total estimado: <strong style="color:var(--bla)">$${Math.round(total).toLocaleString('es-AR')}</strong></div><button onclick="enviarPedido()" ${tieneItems?'':'disabled'} style="background:${tieneItems?'var(--ora)':'var(--g2)'};color:${tieneItems?'#fff':'var(--gt)'};border:none;border-radius:8px;padding:8px 18px;font-weight:700;cursor:${tieneItems?'pointer':'not-allowed'};font-size:13px">📦 Enviar pedido a VIN</button></div>`;
+  panel.innerHTML=h;panel.style.display='block';
 }
 
-function pedidoQty(rk, delta){
-  if(!PEDIDO_ACTUAL.items[rk]) PEDIDO_ACTUAL.items[rk] = 0;
-  PEDIDO_ACTUAL.items[rk] = Math.max(0, (PEDIDO_ACTUAL.items[rk]||0) + delta);
-  const code = PEDIDO_ACTUAL.maquinaCode;
-  const maq = MAQ[code];
-  if(maq) renderPedidoPanel(maq);
+function pedidoQty(rk,delta){
+  if(!PEDIDO_ACTUAL.items[rk])PEDIDO_ACTUAL.items[rk]=0;
+  PEDIDO_ACTUAL.items[rk]=Math.max(0,(PEDIDO_ACTUAL.items[rk]||0)+delta);
+  const maq=MAQ[PEDIDO_ACTUAL.maquinaCode];if(maq)renderPedidoPanel(maq);
 }
 
 async function enviarPedido(){
-  const items = PEDIDO_ACTUAL.items;
-  const code = PEDIDO_ACTUAL.maquinaCode;
-  const maq = MAQ[code];
-  if(!maq || !maq.supaId) return;
-  
-  const detalle = [];
-  let total = 0;
-  P.forEach(function(p){
-    const qty = items[p.rk]||0;
-    if(qty > 0){
-      const precio = p.com*0.90;
-      const subtotal = qty*precio;
-      total += subtotal;
-      detalle.push({rk:p.rk, nombre:p.i, potes:qty, precioUnit:Math.round(precio), subtotal:Math.round(subtotal)});
-    }
-  });
-  
-  if(!detalle.length) return;
-  
-  const btn = document.querySelector('#pedidoPanel button[onclick="enviarPedido()"]');
+  const items=PEDIDO_ACTUAL.items,code=PEDIDO_ACTUAL.maquinaCode,maq=MAQ[code];
+  if(!maq||!maq.supaId)return;
+  const detalle=[];let total=0;
+  P.forEach(function(p){const qty=items[p.rk]||0;if(qty>0){const precio=p.com*0.90;const sub=qty*precio;total+=sub;detalle.push({rk:p.rk,nombre:p.i,potes:qty,precioUnit:Math.round(precio),subtotal:Math.round(sub)});}});
+  if(!detalle.length)return;
+  const btn=document.querySelector('#pedidoPanel button[onclick="enviarPedido()"]');
   if(btn){btn.disabled=true;btn.textContent='Enviando...';}
-  
   try{
-    if(ONLINE_MODE){
-      await sbPost('pedidos',{
-        maquina_id:maq.supaId,
-        estado:'pendiente',
-        detalle:detalle,
-        total:Math.round(total),
-        nota:'Pedido de '+maq.name+' — '+(CU&&CU.name||'Franquiciado')
-      });
-    }
-    // Mostrar confirmación
-    PEDIDO_ACTUAL = {items:{}, maquinaCode:null};
-    const panel = $('pedidoPanel');
-    if(panel){
-      panel.innerHTML = `<div style="padding:1.5rem;text-align:center">
-        <div style="font-size:2rem;margin-bottom:8px">✅</div>
-        <div style="font-weight:700;color:var(--ver);font-size:15px;margin-bottom:6px">¡Pedido enviado!</div>
-        <div style="font-size:13px;color:var(--gt)">VIN recibió tu pedido y lo confirmará a la brevedad. Te avisaremos cuando el stock esté actualizado.</div>
-        <button onclick="renderStock()" style="margin-top:12px;background:var(--g2);border:1px solid var(--gb);border-radius:8px;padding:6px 16px;color:var(--bla);cursor:pointer;font-size:12px">Hacer otro pedido</button>
-      </div>`;
-    }
-  }catch(e){
-    console.error('Error enviando pedido:',e);
-    if(btn){btn.disabled=false;btn.textContent='📦 Enviar pedido a VIN';}
-  }
+    if(ONLINE_MODE)await sbPost('pedidos',{maquina_id:maq.supaId,estado:'pendiente',detalle:detalle,total:Math.round(total),nota:'Pedido de '+maq.name+' — '+(CU&&CU.name||'Franquiciado')});
+    PEDIDO_ACTUAL={items:{},maquinaCode:null};
+    const panel=$('pedidoPanel');
+    if(panel)panel.innerHTML=`<div style="padding:1.5rem;text-align:center"><div style="font-size:2rem;margin-bottom:8px">✅</div><div style="font-weight:700;color:var(--ver);font-size:15px;margin-bottom:6px">¡Pedido enviado!</div><div style="font-size:13px;color:var(--gt)">VIN recibió tu pedido y lo confirmará a la brevedad.</div><button onclick="renderStock()" style="margin-top:12px;background:var(--g2);border:1px solid var(--gb);border-radius:8px;padding:6px 16px;color:var(--bla);cursor:pointer;font-size:12px">Hacer otro pedido</button></div>`;
+  }catch(e){console.error('enviarPedido:',e);if(btn){btn.disabled=false;btn.textContent='📦 Enviar pedido a VIN';}}
 }
 
 async function cargarPedidos(){
-  const el = $('pedidosList');
-  if(!el) return;
-  el.innerHTML = '<div style="color:var(--gt);text-align:center;padding:2rem">Cargando...</div>';
-  
-  if(!ONLINE_MODE){
-    el.innerHTML = '<div style="color:var(--gt);text-align:center;padding:2rem">Sin conexión a Supabase.</div>';
-    return;
-  }
-  
-  const pedidos = await sbGet('pedidos','order=created_at.desc&limit=50');
-  if(!pedidos||!pedidos.length){
-    el.innerHTML = '<div style="color:var(--gt);text-align:center;padding:2rem">No hay pedidos todavía.</div>';
-    return;
-  }
-  
-  // Obtener nombres de máquinas
-  const maqMap = {};
-  Object.values(MAQ).forEach(function(m){if(m.supaId)maqMap[m.supaId]=m.name;});
-  
-  el.innerHTML = pedidos.map(function(p){
-    const maqNombre = maqMap[p.maquina_id] || p.maquina_id;
-    const fecha = new Date(p.created_at).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
-    const detalle = (p.detalle||[]).map(function(d){return d.potes+'× '+d.nombre;}).join(', ');
-    const estadoColor = p.estado==='pendiente'?'var(--ora)':p.estado==='aceptado'?'var(--ver)':'var(--roj)';
-    const estadoLabel = p.estado==='pendiente'?'⏳ Pendiente':p.estado==='aceptado'?'✓ Aceptado':'✗ Rechazado';
-    
-    return `<div style="border:1px solid var(--gb);border-radius:12px;padding:1rem;margin-bottom:.75rem;background:var(--g2)">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
-        <div>
-          <div style="font-weight:700;font-size:14px">🏭 ${maqNombre}</div>
-          <div style="font-size:12px;color:var(--gt);margin-top:2px">${fecha} · ${detalle}</div>
-          ${p.nota?`<div style="font-size:12px;color:var(--gt);margin-top:2px">${p.nota}</div>`:''}
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:13px;font-weight:700;color:var(--ora)">$${Math.round(p.total||0).toLocaleString('es-AR')}</div>
-          <div style="font-size:11px;color:${estadoColor};font-weight:600;margin-top:2px">${estadoLabel}</div>
-        </div>
-      </div>
-      ${p.estado==='pendiente'?`<div style="display:flex;gap:8px;margin-top:10px">
-        <button onclick="accionPedido('${p.id}','aceptado')" style="flex:1;background:var(--ver);color:#fff;border:none;border-radius:8px;padding:7px;cursor:pointer;font-weight:700;font-size:12px">✓ Aceptar pedido</button>
-        <button onclick="accionPedido('${p.id}','rechazado')" style="flex:1;background:var(--roj);color:#fff;border:none;border-radius:8px;padding:7px;cursor:pointer;font-weight:700;font-size:12px">✗ Rechazar</button>
-      </div>`:''}
-    </div>`;
+  const el=$('pedidosList');if(!el)return;
+  el.innerHTML='<div style="color:var(--gt);text-align:center;padding:2rem">Cargando...</div>';
+  if(!ONLINE_MODE){el.innerHTML='<div style="color:var(--gt);text-align:center;padding:2rem">Sin conexión.</div>';return;}
+  const pedidos=await sbGet('pedidos','order=created_at.desc&limit=50');
+  if(!pedidos||!pedidos.length){el.innerHTML='<div style="color:var(--gt);text-align:center;padding:2rem">No hay pedidos todavía.</div>';return;}
+  const maqMap={};Object.values(MAQ).forEach(function(m){if(m.supaId)maqMap[m.supaId]=m.name;});
+  el.innerHTML=pedidos.map(function(p){
+    const mn=maqMap[p.maquina_id]||'Máquina desconocida';
+    const fecha=new Date(p.created_at).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const det=(p.detalle||[]).map(function(d){return d.potes+'× '+d.nombre;}).join(', ');
+    const ec=p.estado==='pendiente'?'var(--ora)':p.estado==='aceptado'?'var(--ver)':'var(--roj)';
+    const el2=p.estado==='pendiente'?'⏳ Pendiente':p.estado==='aceptado'?'✓ Aceptado':'✗ Rechazado';
+    return`<div style="border:1px solid var(--gb);border-radius:12px;padding:1rem;margin-bottom:.75rem;background:var(--g2)"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:14px">🏭 ${mn}</div><div style="font-size:12px;color:var(--gt);margin-top:2px">${fecha} · ${det}</div></div><div style="text-align:right"><div style="font-size:13px;font-weight:700;color:var(--ora)">$${Math.round(p.total||0).toLocaleString('es-AR')}</div><div style="font-size:11px;color:${ec};font-weight:600;margin-top:2px">${el2}</div></div></div>${p.estado==='pendiente'?`<div style="display:flex;gap:8px;margin-top:10px"><button onclick="accionPedido('${p.id}','aceptado')" style="flex:1;background:var(--ver);color:#fff;border:none;border-radius:8px;padding:7px;cursor:pointer;font-weight:700;font-size:12px">✓ Aceptar</button><button onclick="accionPedido('${p.id}','rechazado')" style="flex:1;background:var(--roj);color:#fff;border:none;border-radius:8px;padding:7px;cursor:pointer;font-weight:700;font-size:12px">✗ Rechazar</button></div>`:''}</div>`;
   }).join('');
-  
-  // Badge en sidebar
-  const pendientes = pedidos.filter(function(p){return p.estado==='pendiente';}).length;
-  actualizarBadgePedidos(pendientes);
+  const pend=pedidos.filter(function(p){return p.estado==='pendiente';}).length;
+  actualizarBadgePedidos(pend);
 }
 
-async function accionPedido(id, estado){
-  await sbFetch('pedidos?id=eq.'+id, {method:'PATCH', body:{estado:estado, updated_at:new Date().toISOString()}, prefer:'return=minimal'});
+async function accionPedido(id,estado){
+  await sbFetch('pedidos?id=eq.'+id,{method:'PATCH',body:{estado:estado,updated_at:new Date().toISOString()},prefer:'return=minimal'});
   cargarPedidos();
 }
 
 async function verificarPedidosPendientes(){
-  if(!ONLINE_MODE||!CU||CU.role!=='admin') return;
-  const r = await sbGet('pedidos','estado=eq.pendiente&select=id');
+  if(!ONLINE_MODE||!CU||CU.role!=='admin')return;
+  const r=await sbGet('pedidos','estado=eq.pendiente&select=id');
   actualizarBadgePedidos(r?r.length:0);
 }
 
 function actualizarBadgePedidos(n){
-  const badge = $('badgePedidos');
-  if(!badge) return;
-  if(n>0){badge.textContent=n;badge.style.display='inline';}
-  else{badge.style.display='none';}
+  const badge=$('badgePedidos');if(!badge)return;
+  if(n>0){badge.textContent=n;badge.style.display='inline';}else{badge.style.display='none';}
 }
+
+setInterval(function(){if(CU&&CU.role==='admin'&&ONLINE_MODE)verificarPedidosPendientes();},60000);
+
 </script>
 
 <!-- Modal compra manual -->
