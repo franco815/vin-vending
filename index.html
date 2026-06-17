@@ -645,8 +645,11 @@ async function loadMaquinasSupa(){
   if(!ONLINE_MODE||!CU)return;
   try{
     if(CU.role==='admin'){
-      const us=await sbGet('usuarios','select=id,name,username,role');
+      const us=await sbGet('usuarios','select=id,nombre,username,role');
       if(us)us.forEach(function(u){USUARIOS_MAP[u.id]={name:u.nombre||u.username,username:u.username,role:u.role};});
+    } else {
+      // Franquiciado: limpiar MAQ del localStorage para no heredar máquinas de otras sesiones
+      MAQ={};
     }
     const q=CU.role==='admin'?'activa=eq.true':'usuario_id=eq.'+CU.id+'&activa=eq.true';
     const maquinas=await sbGet('maquinas',q+'&order=nombre');
@@ -856,7 +859,13 @@ function cambiarMaquina(c){
   recalcStock(MAQ[c]);updateAlertaBadge();
 }
 function renderSelectorMaquinas(){
-  var codigos=Object.keys(MAQ);
+  var todosLosCodeigos=Object.keys(MAQ);
+  // Franquiciado solo ve sus propias máquinas
+  var codigos=todosLosCodeigos.filter(function(c){
+    if(!CU)return true;
+    if(CU.role==='admin')return true;
+    return MAQ[c].usuarioId===CU.id;
+  });
   var wrap=$('maqSelectorWrap');var sel=$('sidebarMaqSelect');
   if(!wrap||!sel)return;
   if(!codigos.length){wrap.style.display='none';return;}
